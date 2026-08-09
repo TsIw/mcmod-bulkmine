@@ -1,0 +1,48 @@
+# gradle
+
+.gradle/
+build/
+out/
+classes/
+
+# build output -- rebuilt by build.bat from source, never committed
+
+dist/
+
+# eclipse
+
+*.launch
+
+# idea
+
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# vscode
+
+.settings/
+.vscode/
+bin/
+.classpath
+.project
+
+# macos
+
+*.DS_Store
+
+# fabric
+#
+# run/ is the development client's game folder: worlds, logs, options.txt,
+# the config the mod writes, and any third-party mods dropped in for testing
+# (The True Paxels lives here). All of it is local debugging state.
+
+run/
+
+# java
+
+hs_err_*.log
+replay_*.log
+*.hprof
+*.jfr

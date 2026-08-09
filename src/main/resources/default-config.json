@@ -1,0 +1,118 @@
+{
+  // ============================================================
+  //  SERVER  -- read by the server. In singleplayer that is your
+  //             own world; on a remote server, that server's copy
+  //             wins and this section is ignored.
+  // ============================================================
+  "server": {
+    // Master switch for the whole feature.
+    "enabled": true,
+
+    // Cube size for a player who has never run "/bulkmine config size".
+    // Each player keeps their own size from then on.
+    "defaultCubeSize": 3,
+
+    // Ceiling on what a player may set. Odd numbers 1-15.
+    "maxCubeSize": 9,
+
+    // Clear leaves as well when felling a tree.
+    "breakLeaves": true,
+
+    // How far leaves are followed from the felled logs, in blocks.
+    "leafDistance": 6,
+
+    // Safety caps for tree felling.
+    "maxLogs": 256,
+    "maxLeaves": 1024,
+    "treeRadius": 16,
+
+    // Spawn every drop at the block you broke instead of where each block was.
+    "aggregateDrops": true,
+
+    // Keep working while the player is sneaking.
+    "allowWhileSneaking": true,
+
+    // Skip blocks the held tool cannot get drops from, the way a stone
+    // pickaxe gets nothing from diamond ore. The block under the cursor is
+    // still broken by the game itself; only the sweep stops.
+    // Set false to break them anyway, dropping nothing.
+    "requireCorrectTool": true,
+
+    // Extra tools, on top of the vanilla #minecraft:pickaxes / axes / shovels
+    // which are always recognised. Add other mods' tools in game with
+    //   /bulkmine tool add hand all
+    // Roles: pickaxe, axe, shovel.
+    "tools": [],
+
+    // Every block bulk breaking may touch, spelled out. An entry is either a
+    // block id ("minecraft:stone") or a tag reference ("#c:ores"). Delete a
+    // line to stop that block being included -- naturally generated blocks
+    // are listed individually so any of them can be dropped.
+    //   pickaxe  -- mined as a cube by a pickaxe-role tool
+    //   shovel   -- mined as a cube by a shovel-role tool
+    //   fellable -- felled as a tree by an axe-role tool
+    //   leaves   -- cleared around a felled tree
+    // In game: /bulkmine block add|remove <block> <roles>
+    "blocks": {
+      "pickaxe": [
+        "minecraft:stone", "minecraft:granite", "minecraft:diorite", "minecraft:andesite",
+        "minecraft:tuff", "minecraft:deepslate", "minecraft:calcite",
+        "minecraft:dripstone_block", "minecraft:pointed_dripstone", "minecraft:smooth_basalt",
+        "minecraft:cobblestone", "minecraft:mossy_cobblestone", "minecraft:cobbled_deepslate",
+        "minecraft:obsidian", "minecraft:sandstone", "minecraft:red_sandstone",
+        "minecraft:amethyst_block", "minecraft:budding_amethyst", "minecraft:terracotta",
+        "minecraft:white_terracotta", "minecraft:orange_terracotta",
+        "minecraft:yellow_terracotta", "minecraft:red_terracotta", "minecraft:brown_terracotta",
+        "minecraft:light_gray_terracotta", "minecraft:ice", "minecraft:packed_ice",
+        "minecraft:blue_ice", "minecraft:netherrack", "minecraft:basalt", "minecraft:blackstone",
+        "minecraft:magma_block", "minecraft:crying_obsidian", "minecraft:sulfur",
+        "minecraft:potent_sulfur", "minecraft:sulfur_spike", "minecraft:cinnabar",
+        "minecraft:end_stone", "minecraft:coal_ore", "minecraft:deepslate_coal_ore",
+        "minecraft:copper_ore", "minecraft:deepslate_copper_ore", "minecraft:iron_ore",
+        "minecraft:deepslate_iron_ore", "minecraft:gold_ore", "minecraft:deepslate_gold_ore",
+        "minecraft:redstone_ore", "minecraft:deepslate_redstone_ore", "minecraft:lapis_ore",
+        "minecraft:deepslate_lapis_ore", "minecraft:emerald_ore",
+        "minecraft:deepslate_emerald_ore", "minecraft:diamond_ore",
+        "minecraft:deepslate_diamond_ore", "minecraft:nether_gold_ore",
+        "minecraft:nether_quartz_ore", "minecraft:ancient_debris"
+      ],
+
+      "shovel": [
+        "minecraft:dirt", "minecraft:coarse_dirt", "minecraft:rooted_dirt",
+        "minecraft:grass_block", "minecraft:podzol", "minecraft:mycelium",
+        "minecraft:moss_block", "minecraft:mud", "minecraft:muddy_mangrove_roots",
+        "minecraft:dirt_path", "minecraft:sand", "minecraft:red_sand", "minecraft:gravel",
+        "minecraft:clay", "minecraft:snow", "minecraft:snow_block", "minecraft:powder_snow",
+        "minecraft:soul_sand", "minecraft:soul_soil"
+      ],
+
+      "fellable": [
+        "minecraft:oak_log", "minecraft:spruce_log", "minecraft:birch_log",
+        "minecraft:jungle_log", "minecraft:acacia_log", "minecraft:dark_oak_log",
+        "minecraft:pale_oak_log", "minecraft:cherry_log", "minecraft:mangrove_log",
+        "minecraft:crimson_stem", "minecraft:warped_stem", "minecraft:brown_mushroom_block",
+        "minecraft:red_mushroom_block", "minecraft:mushroom_stem"
+      ],
+
+      "leaves": [
+        "minecraft:oak_leaves", "minecraft:spruce_leaves", "minecraft:birch_leaves",
+        "minecraft:jungle_leaves", "minecraft:acacia_leaves", "minecraft:dark_oak_leaves",
+        "minecraft:pale_oak_leaves", "minecraft:cherry_leaves", "minecraft:mangrove_leaves",
+        "minecraft:azalea_leaves", "minecraft:flowering_azalea_leaves"
+      ],
+
+      // Skipped even when a list above includes it. Highest priority.
+      // In game: /bulkmine block deny|allow <block>
+      "blacklist": []
+    }
+  },
+
+  // ============================================================
+  //  CLIENT  -- read only by each player's own client. Never sent
+  //             to the server, and unused on a dedicated server.
+  // ============================================================
+  "client": {
+    // TOP_LEFT / TOP_RIGHT / BOTTOM_LEFT / BOTTOM_RIGHT
+    "hudCorner": "BOTTOM_RIGHT"
+  }
+}

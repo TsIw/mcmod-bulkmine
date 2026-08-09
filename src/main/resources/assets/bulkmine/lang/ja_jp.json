@@ -1,0 +1,35 @@
+{
+	"key.category.bulkmine.keys": "BulkMine",
+	"key.bulkmine.toggle": "一括破壊の切替",
+
+	"bulkmine.hud.on": "一括ON:%s",
+	"bulkmine.hud.off": "一括OFF",
+	"bulkmine.hud.unsupported": "非対応",
+
+	"bulkmine.toggle.on": "一括破壊 ON（サイズ %s）",
+	"bulkmine.toggle.off": "一括破壊 OFF",
+
+	"bulkmine.command.config.header": "あなたの設定:",
+	"bulkmine.command.config.server": "サーバー設定:",
+	"bulkmine.command.size.set": "立方サイズを %s に設定しました",
+
+	"bulkmine.command.tool.added": "%s を %s として登録しました",
+	"bulkmine.command.tool.removed": "%s を削除しました",
+	"bulkmine.command.tool.not_registered": "%s は登録されていません",
+	"bulkmine.command.tool.list.empty": "追加登録されたツールはありません（バニラのつるはし・斧・シャベルは常に対応しています）",
+	"bulkmine.command.tool.list.header": "登録済みツール（%s件）:",
+
+	"bulkmine.command.block.added": "%s を %s として追加しました",
+	"bulkmine.command.block.removed": "%s をブロック一覧から外しました",
+	"bulkmine.command.block.not_listed": "%s はどの一覧にも入っていません",
+	"bulkmine.command.block.denied": "%s をブラックリストに追加しました",
+	"bulkmine.command.block.allowed": "%s をブラックリストから外しました",
+	"bulkmine.command.block.list.header": "ブロック一覧:",
+	"bulkmine.command.block.list.hint": "完全な一覧は config/bulkmine.json にあります",
+
+	"bulkmine.command.reloaded": "設定を再読込しました",
+	"bulkmine.command.error.not_a_block": "%s は設置可能なブロックではありません",
+	"bulkmine.command.error.empty_hand": "何も持っていません",
+	"bulkmine.command.error.bad_role": "不明なロール '%s'（pickaxe / axe / shovel / all のいずれか）",
+	"bulkmine.command.error.bad_size": "サイズは 1〜%s の奇数で指定してください"
+}

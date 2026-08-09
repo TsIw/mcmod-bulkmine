@@ -1,0 +1,21 @@
+{
+	"schemaVersion": 1,
+	"id": "bulkmine-gametest",
+	"version": "1.0.0",
+	"name": "BulkMine Game Tests",
+	"description": "Server-side game tests for BulkMine. Development only -- never shipped in the mod jar.",
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"io.github.tsiw.bulkmine.test.AttachmentProbe"
+		],
+		"fabric-gametest": [
+			"io.github.tsiw.bulkmine.test.BulkMineGameTests"
+		]
+	},
+	"depends": {
+		"bulkmine": "*",
+		"fabric-gametest-api-v1": "*"
+	}
+}

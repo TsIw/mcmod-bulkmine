@@ -1,0 +1,30 @@
+{
+	"schemaVersion": 1,
+	"id": "bulkmine",
+	"version": "${version}",
+	"name": "BulkMine",
+	"description": "Area mining and tree felling with a keybind toggle and a permanent text status readout.",
+	"authors": ["TsIw"],
+	"contact": {
+		"homepage": "https://github.com/TsIw/mcmod-bulkmine",
+		"sources": "https://github.com/TsIw/mcmod-bulkmine",
+		"issues": "https://github.com/TsIw/mcmod-bulkmine/issues"
+	},
+	"license": "MIT",
+	"icon": "assets/bulkmine/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"io.github.tsiw.bulkmine.BulkMine"
+		],
+		"client": [
+			"io.github.tsiw.bulkmine.client.BulkMineClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

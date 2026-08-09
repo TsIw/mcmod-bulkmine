@@ -1,0 +1,35 @@
+{
+	"key.category.bulkmine.keys": "BulkMine",
+	"key.bulkmine.toggle": "Toggle bulk mining",
+
+	"bulkmine.hud.on": "Bulk ON:%s",
+	"bulkmine.hud.off": "Bulk OFF",
+	"bulkmine.hud.unsupported": "Unsupported",
+
+	"bulkmine.toggle.on": "Bulk mining enabled (size %s)",
+	"bulkmine.toggle.off": "Bulk mining disabled",
+
+	"bulkmine.command.config.header": "Your settings:",
+	"bulkmine.command.config.server": "Server settings:",
+	"bulkmine.command.size.set": "Cube size set to %s",
+
+	"bulkmine.command.tool.added": "Registered %s as %s",
+	"bulkmine.command.tool.removed": "Removed %s",
+	"bulkmine.command.tool.not_registered": "%s is not registered",
+	"bulkmine.command.tool.list.empty": "No extra tools registered (vanilla pickaxes, axes and shovels always work)",
+	"bulkmine.command.tool.list.header": "Registered tools (%s):",
+
+	"bulkmine.command.block.added": "Added %s as %s",
+	"bulkmine.command.block.removed": "Removed %s from the block lists",
+	"bulkmine.command.block.not_listed": "%s is not on any block list",
+	"bulkmine.command.block.denied": "Blacklisted %s",
+	"bulkmine.command.block.allowed": "Removed %s from the blacklist",
+	"bulkmine.command.block.list.header": "Block lists:",
+	"bulkmine.command.block.list.hint": "Full lists are in config/bulkmine.json",
+
+	"bulkmine.command.reloaded": "Reloaded config",
+	"bulkmine.command.error.not_a_block": "%s is not a placeable block",
+	"bulkmine.command.error.empty_hand": "You are not holding anything",
+	"bulkmine.command.error.bad_role": "Unknown role '%s' (expected pickaxe, axe, shovel or all)",
+	"bulkmine.command.error.bad_size": "Size must be an odd number from 1 to %s"
+}
