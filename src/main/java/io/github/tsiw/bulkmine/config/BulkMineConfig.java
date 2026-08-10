@@ -23,6 +23,8 @@ public final class BulkMineConfig {
 		public int defaultCubeSize = 3;
 		/** Ceiling on what a player may set with {@code /bulkmine config size}. */
 		public int maxCubeSize = 9;
+		/** The sizes the toggle key steps through before it turns off. */
+		public List<Integer> toggleSizes = new ArrayList<>(List.of(3, 5));
 		public boolean breakLeaves = true;
 		public int leafDistance = 6;
 		public int maxLogs = 256;
@@ -32,6 +34,10 @@ public final class BulkMineConfig {
 		public boolean allowWhileSneaking = true;
 		/** Skip blocks the held tool is too weak to get drops from. */
 		public boolean requireCorrectTool = true;
+		/** Percent chance that one bulk-broken block costs the tool durability. */
+		public double durabilityChance = 100.0;
+		/** Sound id played when a swing stops at the durability floor, or "". */
+		public String durabilityWarningSound = "minecraft:block.anvil.place";
 		public List<ToolEntry> tools = new ArrayList<>();
 		public Blocks blocks = new Blocks();
 	}
@@ -103,6 +109,17 @@ public final class BulkMineConfig {
 			server.defaultCubeSize = server.maxCubeSize;
 		}
 
+		server.toggleSizes = sanitiseToggleSizes(server, problems);
+
+		if (!(server.durabilityChance >= 0.0) || server.durabilityChance > 100.0) {
+			problems.add("durabilityChance must be between 0 and 100, was "
+					+ server.durabilityChance + ", using 100");
+			server.durabilityChance = 100.0;
+		}
+		if (server.durabilityWarningSound == null) {
+			server.durabilityWarningSound = "";
+		}
+
 		server.leafDistance = clamp("leafDistance", server.leafDistance, 0, 32, 6, problems);
 		server.maxLogs = clamp("maxLogs", server.maxLogs, 1, 8192, 256, problems);
 		server.maxLeaves = clamp("maxLeaves", server.maxLeaves, 0, 16384, 1024, problems);
@@ -125,6 +142,32 @@ public final class BulkMineConfig {
 		client.hudCorner = corner;
 
 		return problems;
+	}
+
+	/**
+	 * The toggle key's sizes, in order, with anything unusable dropped: even
+	 * numbers, values outside 1-15, sizes above {@code maxCubeSize} and repeats.
+	 * An empty result would leave the key unable to turn anything on, so it
+	 * falls back to the one size everybody starts with.
+	 */
+	private static List<Integer> sanitiseToggleSizes(final Server server, final List<String> problems) {
+		List<Integer> kept = new ArrayList<>();
+		if (server.toggleSizes != null) {
+			for (Integer size : server.toggleSizes) {
+				if (size == null || size < 1 || size > 15 || size % 2 == 0 || size > server.maxCubeSize) {
+					problems.add("dropped toggleSizes entry " + size
+							+ ", must be an odd number from 1 to " + server.maxCubeSize);
+				} else if (!kept.contains(size)) {
+					kept.add(size);
+				}
+			}
+		}
+
+		if (kept.isEmpty()) {
+			problems.add("toggleSizes has nothing usable in it, using " + server.defaultCubeSize);
+			kept.add(server.defaultCubeSize);
+		}
+		return kept;
 	}
 
 	private static List<String> orEmpty(final List<String> list) {

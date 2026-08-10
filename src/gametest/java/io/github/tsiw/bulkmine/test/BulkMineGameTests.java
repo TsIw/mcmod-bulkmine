@@ -4,6 +4,7 @@ import io.github.tsiw.bulkmine.Role;
 import io.github.tsiw.bulkmine.config.BulkMineConfig;
 import io.github.tsiw.bulkmine.config.ConfigManager;
 import io.github.tsiw.bulkmine.config.ConfigWriter;
+import io.github.tsiw.bulkmine.mining.BreakExecutor;
 import io.github.tsiw.bulkmine.mining.CubeMiner;
 import io.github.tsiw.bulkmine.registry.BlockWhitelist;
 import io.github.tsiw.bulkmine.registry.ToolRegistry;
@@ -281,6 +282,44 @@ public class BulkMineGameTests {
 	}
 
 	@GameTest(structure = EMPTY)
+	public void onlyAToolThatWillSurviveIsWarnedAboutTheLimit(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_PICKAXE);
+		ItemStack tool = player.getMainHandItem();
+
+		// Two points left: the sweep stops early and the tool lives on one,
+		// which is exactly what the warning is for.
+		tool.setDamageValue(tool.getMaxDamage() - 2);
+		helper.assertTrue(BreakExecutor.toolSurvivesTheSwing(player, tool.copy()),
+				"a tool that survives the swing should be warned");
+
+		// One point left: the game spends it on the cursor block and the tool is
+		// gone, so warning about a limit would be talking about nothing.
+		tool.setDamageValue(tool.getMaxDamage() - 1);
+		helper.assertFalse(BreakExecutor.toolSurvivesTheSwing(player, tool.copy()),
+				"a tool about to break should not be warned");
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void aBadWarningSoundIdDoesNotStopTheSweep(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_PICKAXE);
+		// A typo in a hand-edited config should cost the player a noise and
+		// nothing else -- this runs on the swing that hits the durability floor.
+		config().durabilityWarningSound = "minecraft:no.such.sound";
+		ItemStack tool = player.getMainHandItem();
+		tool.setDamageValue(tool.getMaxDamage() - 2);
+
+		BlockPos origin = new BlockPos(3, 3, 3);
+		fill(helper, origin, 1, Blocks.STONE);
+
+		mine(helper, player, origin);
+
+		helper.assertFalse(player.getMainHandItem().isEmpty(), "the tool should not have broken");
+		helper.assertBlockNotPresent(Blocks.STONE, origin.offset(1, 1, 1));
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
 	public void toolWithOneDurabilityBreaksButSweepFinishes(final GameTestHelper helper) {
 		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_PICKAXE);
 		ItemStack tool = player.getMainHandItem();
@@ -298,6 +337,93 @@ public class BulkMineGameTests {
 			helper.assertBlockNotPresent(Blocks.STONE, origin.offset(dx, 0, dz));
 			helper.assertBlockNotPresent(Blocks.STONE, origin.offset(dx, 1, dz));
 		});
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void fullDurabilityChanceChargesForEveryBlock(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_PICKAXE);
+
+		BlockPos origin = new BlockPos(3, 3, 3);
+		fill(helper, origin, 1, Blocks.STONE);
+
+		mine(helper, player, origin);
+
+		// The seventeen blocks of the sweep plus the one the game broke itself.
+		int damage = player.getMainHandItem().getDamageValue();
+		helper.assertTrue(damage == 18, "expected 18 durability spent, got " + damage);
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void zeroDurabilityChanceCostsOnlyTheCursorBlock(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_PICKAXE);
+		config().durabilityChance = 0.0;
+		player.getMainHandItem().setDamageValue(100);
+
+		BlockPos origin = new BlockPos(3, 3, 3);
+		fill(helper, origin, 1, Blocks.STONE);
+
+		mine(helper, player, origin);
+
+		// Seventeen free blocks, and the one point the game itself spends on the
+		// block under the cursor, which is none of our business.
+		int damage = player.getMainHandItem().getDamageValue();
+		helper.assertTrue(damage == 101, "expected only the cursor block charged, damage is " + damage);
+		// Free or not, the sweep still ran.
+		helper.assertBlockNotPresent(Blocks.STONE, origin.offset(1, 1, 1));
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void zeroDurabilityChanceStillLetsTheCursorBlockBreakTheTool(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_PICKAXE);
+		config().durabilityChance = 0.0;
+		ItemStack tool = player.getMainHandItem();
+		tool.setDamageValue(tool.getMaxDamage() - 1);
+
+		BlockPos origin = new BlockPos(3, 3, 3);
+		fill(helper, origin, 1, Blocks.STONE);
+
+		mine(helper, player, origin);
+
+		// Charging nothing for the sweep does not spare a tool on its last point:
+		// the game spends that point on the cursor block regardless.
+		helper.assertTrue(player.getMainHandItem().isEmpty(), "the tool should have broken");
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void theToggleKeyStepsThroughTheSizesThenOff(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_PICKAXE);
+		// preparePlayer leaves it on at the server's starting size.
+		helper.assertTrue(PlayerSettings.cubeSize(player) == 3, "expected to start on 3");
+
+		PlayerSettings.cycle(player);
+		helper.assertTrue(PlayerSettings.isEnabled(player) && PlayerSettings.cubeSize(player) == 5,
+				"expected on at 5, got " + state(player));
+
+		PlayerSettings.cycle(player);
+		helper.assertFalse(PlayerSettings.isEnabled(player), "expected off after the last size");
+
+		PlayerSettings.cycle(player);
+		helper.assertTrue(PlayerSettings.isEnabled(player) && PlayerSettings.cubeSize(player) == 3,
+				"expected back to the first size, got " + state(player));
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void theToggleKeyTurnsOffFromASizeItDoesNotKnow(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_PICKAXE);
+		// Set by hand, and not one of the cycle's steps.
+		PlayerSettings.setCubeSize(player, 9);
+
+		PlayerSettings.cycle(player);
+		helper.assertFalse(PlayerSettings.isEnabled(player), "expected off, got " + state(player));
+
+		// The next press starts the cycle over rather than resuming from the 9.
+		PlayerSettings.cycle(player);
+		helper.assertTrue(PlayerSettings.cubeSize(player) == 3, "expected 3, got " + state(player));
 		helper.succeed();
 	}
 
@@ -547,6 +673,11 @@ public class BulkMineGameTests {
 		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(item));
 		PlayerSettings.setEnabled(player, true);
 		return player;
+	}
+
+	/** The toggle state in one string, for assertion messages. */
+	private static String state(final ServerPlayer player) {
+		return PlayerSettings.isEnabled(player) ? "on at " + PlayerSettings.cubeSize(player) : "off";
 	}
 
 	private static BulkMineConfig.Server config() {

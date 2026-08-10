@@ -43,7 +43,7 @@ public class BulkMine implements ModInitializer {
 
 		ServerPlayNetworking.registerGlobalReceiver(
 				BulkMinePayloads.ToggleRequest.TYPE,
-				(payload, context) -> PlayerSettings.toggle(context.player()));
+				(payload, context) -> PlayerSettings.cycle(context.player()));
 
 		// Tell a joining client where it stands, so the HUD is right immediately.
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> PlayerSettings.sync(handler.getPlayer()));

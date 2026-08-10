@@ -77,7 +77,8 @@ public final class BulkMineCommand {
 		LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("bulkmine");
 
 		// Per-player, so no permission gate: this is the player's own setup.
-		root.then(Commands.literal("toggle").executes(BulkMineCommand::toggle));
+		// There is no "toggle" here on purpose -- the key does the same job and
+		// more, since it picks the size as well.
 		root.then(Commands.literal("config")
 				.executes(BulkMineCommand::showConfig)
 				.then(Commands.literal("size")
@@ -153,15 +154,6 @@ public final class BulkMineCommand {
 
 	// ------------------------------------------------------ per-player state
 
-	private static int toggle(final CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-		ServerPlayer player = context.getSource().getPlayerOrException();
-		boolean enabled = PlayerSettings.toggle(player);
-		context.getSource().sendSuccess(() -> enabled
-				? Component.translatable("bulkmine.toggle.on", PlayerSettings.cubeSize(player))
-				: Component.translatable("bulkmine.toggle.off"), false);
-		return enabled ? 1 : 0;
-	}
-
 	private static int setSize(final CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
 		ServerPlayer player = context.getSource().getPlayerOrException();
 		int size = IntegerArgumentType.getInteger(context, "size");
@@ -184,12 +176,12 @@ public final class BulkMineCommand {
 
 		source.sendSuccess(() -> Component.translatable("bulkmine.command.config.header"), false);
 		line(source, "bulk mining", PlayerSettings.isEnabled(player) ? "on" : "off");
-		line(source, "cube size", PlayerSettings.cubeSize(player)
-				+ (PlayerSettings.hasOwnCubeSize(player) ? "" : " (server default)"));
+		line(source, "cube size", String.valueOf(PlayerSettings.cubeSize(player)));
 
 		source.sendSuccess(() -> Component.translatable("bulkmine.command.config.server"), false);
 		line(source, "enabled", String.valueOf(server.enabled));
 		line(source, "defaultCubeSize", String.valueOf(server.defaultCubeSize));
+		line(source, "toggleSizes", server.toggleSizes.toString());
 		line(source, "maxCubeSize", String.valueOf(server.maxCubeSize));
 		line(source, "breakLeaves", server.breakLeaves + " (distance " + server.leafDistance + ")");
 		line(source, "maxLogs / maxLeaves", server.maxLogs + " / " + server.maxLeaves);
@@ -197,6 +189,9 @@ public final class BulkMineCommand {
 		line(source, "aggregateDrops", String.valueOf(server.aggregateDrops));
 		line(source, "allowWhileSneaking", String.valueOf(server.allowWhileSneaking));
 		line(source, "requireCorrectTool", String.valueOf(server.requireCorrectTool));
+		line(source, "durabilityChance", server.durabilityChance + "%");
+		line(source, "durabilityWarningSound",
+				server.durabilityWarningSound.isBlank() ? "(none)" : server.durabilityWarningSound);
 		return 1;
 	}
 

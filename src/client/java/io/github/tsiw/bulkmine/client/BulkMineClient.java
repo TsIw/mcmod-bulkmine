@@ -1,6 +1,7 @@
 package io.github.tsiw.bulkmine.client;
 
 import io.github.tsiw.bulkmine.BulkMine;
+import io.github.tsiw.bulkmine.Colours;
 import io.github.tsiw.bulkmine.net.BulkMinePayloads;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -20,9 +21,10 @@ public class BulkMineClient implements ClientModInitializer {
 
 			// The permanent HUD line answers "what is it doing right now"; this
 			// answers "did my keypress land", which is a different question.
+			// Same colours as the HUD line, so the two read as one thing.
 			context.player().sendOverlayMessage(payload.enabled()
-					? Component.translatable("bulkmine.toggle.on", payload.cubeSize())
-					: Component.translatable("bulkmine.toggle.off"));
+					? Component.translatable("bulkmine.toggle.on", payload.cubeSize()).withColor(Colours.ON)
+					: Component.translatable("bulkmine.toggle.off").withColor(Colours.OFF));
 		});
 
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientState.reset());

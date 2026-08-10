@@ -9,6 +9,8 @@
 	"bulkmine.toggle.on": "一括破壊 ON（サイズ %s）",
 	"bulkmine.toggle.off": "一括破壊 OFF",
 
+	"bulkmine.durability.limit": "耐久値が限界です！",
+
 	"bulkmine.command.config.header": "あなたの設定:",
 	"bulkmine.command.config.server": "サーバー設定:",
 	"bulkmine.command.size.set": "立方サイズを %s に設定しました",

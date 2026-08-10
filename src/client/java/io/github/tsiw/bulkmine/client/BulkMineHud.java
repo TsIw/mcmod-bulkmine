@@ -1,5 +1,6 @@
 package io.github.tsiw.bulkmine.client;
 
+import io.github.tsiw.bulkmine.Colours;
 import io.github.tsiw.bulkmine.config.ConfigManager;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
 import net.minecraft.client.DeltaTracker;
@@ -16,9 +17,12 @@ public final class BulkMineHud implements HudElement {
 	/** Small enough to stay out of the way, large enough to still read. */
 	private static final float SCALE = 0.6F;
 	private static final int MARGIN = 4;
-	private static final int COLOUR_ON = 0xFF55FF55;
-	private static final int COLOUR_OFF = 0xFFAAAAAA;
-	private static final int COLOUR_UNSUPPORTED = 0xFFFF5555;
+
+	// Shared with the action bar messages that mirror this line, so the two
+	// can never drift apart.
+	private static final int COLOUR_ON = Colours.opaque(Colours.ON);
+	private static final int COLOUR_OFF = Colours.opaque(Colours.OFF);
+	private static final int COLOUR_UNSUPPORTED = Colours.opaque(Colours.ALERT);
 
 	@Override
 	public void extractRenderState(final GuiGraphicsExtractor graphics, final DeltaTracker deltaTracker) {

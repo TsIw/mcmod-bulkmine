@@ -8,12 +8,18 @@
     // Master switch for the whole feature.
     "enabled": true,
 
-    // Cube size for a player who has never run "/bulkmine config size".
-    // Each player keeps their own size from then on.
+    // Starting size for a player who has not picked one yet. Raising this
+    // moves everyone who is still on it.
     "defaultCubeSize": 3,
 
     // Ceiling on what a player may set. Odd numbers 1-15.
     "maxCubeSize": 9,
+
+    // The sizes the toggle key steps through, in order. Pressing it walks the
+    // list and then turns bulk mining off, so [3, 5] gives on-3, on-5, off.
+    // A size set by hand with "/bulkmine config size" is not a step of the
+    // cycle, so the next press turns off from there.
+    "toggleSizes": [3, 5],
 
     // Clear leaves as well when felling a tree.
     "breakLeaves": true,
@@ -37,6 +43,18 @@
     // still broken by the game itself; only the sweep stops.
     // Set false to break them anyway, dropping nothing.
     "requireCorrectTool": true,
+
+    // Percent chance that one of the EXTRA blocks costs durability, rolled per
+    // block the way Unbreaking is. 100 charges for every block, 50 for about
+    // half of them, 0 for none. Decimals are allowed.
+    // The block under the cursor is charged for by the game itself and is not
+    // affected. Unbreaking still applies on top of this.
+    "durabilityChance": 100.0,
+
+    // Played to the miner alone when a swing stops because the tool is down to
+    // its last point of durability, alongside the action bar message.
+    // Any sound id works; "" for silence.
+    "durabilityWarningSound": "minecraft:block.anvil.place",
 
     // Extra tools, on top of the vanilla #minecraft:pickaxes / axes / shovels
     // which are always recognised. Add other mods' tools in game with

@@ -9,6 +9,8 @@
 	"bulkmine.toggle.on": "Bulk mining enabled (size %s)",
 	"bulkmine.toggle.off": "Bulk mining disabled",
 
+	"bulkmine.durability.limit": "Durability is at its limit!",
+
 	"bulkmine.command.config.header": "Your settings:",
 	"bulkmine.command.config.server": "Server settings:",
 	"bulkmine.command.size.set": "Cube size set to %s",

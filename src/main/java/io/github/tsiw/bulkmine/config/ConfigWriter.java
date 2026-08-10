@@ -34,41 +34,59 @@ public final class ConfigWriter {
     // Master switch for the whole feature.
     "enabled": %1$s,
 
-    // Cube size for a player who has never run "/bulkmine config size".
-    // Each player keeps their own size from then on.
+    // Starting size for a player who has not picked one yet. Raising this
+    // moves everyone who is still on it.
     "defaultCubeSize": %2$s,
 
     // Ceiling on what a player may set. Odd numbers 1-15.
     "maxCubeSize": %3$s,
 
+    // The sizes the toggle key steps through, in order. Pressing it walks the
+    // list and then turns bulk mining off, so [3, 5] gives on-3, on-5, off.
+    // A size set by hand with "/bulkmine config size" is not a step of the
+    // cycle, so the next press turns off from there.
+    "toggleSizes": %4$s,
+
     // Clear leaves as well when felling a tree.
-    "breakLeaves": %4$s,
+    "breakLeaves": %5$s,
 
     // How far leaves are followed from the felled logs, in blocks.
-    "leafDistance": %5$s,
+    "leafDistance": %6$s,
 
     // Safety caps for tree felling.
-    "maxLogs": %6$s,
-    "maxLeaves": %7$s,
-    "treeRadius": %8$s,
+    "maxLogs": %7$s,
+    "maxLeaves": %8$s,
+    "treeRadius": %9$s,
 
     // Spawn every drop at the block you broke instead of where each block was.
-    "aggregateDrops": %9$s,
+    "aggregateDrops": %10$s,
 
     // Keep working while the player is sneaking.
-    "allowWhileSneaking": %10$s,
+    "allowWhileSneaking": %11$s,
 
     // Skip blocks the held tool cannot get drops from, the way a stone
     // pickaxe gets nothing from diamond ore. The block under the cursor is
     // still broken by the game itself; only the sweep stops.
     // Set false to break them anyway, dropping nothing.
-    "requireCorrectTool": %11$s,
+    "requireCorrectTool": %12$s,
+
+    // Percent chance that one of the EXTRA blocks costs durability, rolled per
+    // block the way Unbreaking is. 100 charges for every block, 50 for about
+    // half of them, 0 for none. Decimals are allowed.
+    // The block under the cursor is charged for by the game itself and is not
+    // affected. Unbreaking still applies on top of this.
+    "durabilityChance": %13$s,
+
+    // Played to the miner alone when a swing stops because the tool is down to
+    // its last point of durability, alongside the action bar message.
+    // Any sound id works; "" for silence.
+    "durabilityWarningSound": %14$s,
 
     // Extra tools, on top of the vanilla #minecraft:pickaxes / axes / shovels
     // which are always recognised. Add other mods' tools in game with
     //   /bulkmine tool add hand all
     // Roles: pickaxe, axe, shovel.
-    "tools": %12$s,
+    "tools": %15$s,
 
     // Every block bulk breaking may touch, spelled out. An entry is either a
     // block id ("minecraft:stone") or a tag reference ("#c:ores"). Delete a
@@ -80,17 +98,17 @@ public final class ConfigWriter {
     //   leaves   -- cleared around a felled tree
     // In game: /bulkmine block add|remove <block> <roles>
     "blocks": {
-      "pickaxe": %13$s,
+      "pickaxe": %16$s,
 
-      "shovel": %14$s,
+      "shovel": %17$s,
 
-      "fellable": %15$s,
+      "fellable": %18$s,
 
-      "leaves": %16$s,
+      "leaves": %19$s,
 
       // Skipped even when a list above includes it. Highest priority.
       // In game: /bulkmine block deny|allow <block>
-      "blacklist": %17$s
+      "blacklist": %20$s
     }
   },
 
@@ -100,7 +118,7 @@ public final class ConfigWriter {
   // ============================================================
   "client": {
     // TOP_LEFT / TOP_RIGHT / BOTTOM_LEFT / BOTTOM_RIGHT
-    "hudCorner": "%18$s"
+    "hudCorner": "%21$s"
   }
 }
 """;
@@ -111,6 +129,7 @@ public final class ConfigWriter {
 				s.enabled,
 				s.defaultCubeSize,
 				s.maxCubeSize,
+				inlineIntArray(s.toggleSizes),
 				s.breakLeaves,
 				s.leafDistance,
 				s.maxLogs,
@@ -119,6 +138,8 @@ public final class ConfigWriter {
 				s.aggregateDrops,
 				s.allowWhileSneaking,
 				s.requireCorrectTool,
+				s.durabilityChance,
+				quote(s.durabilityWarningSound),
 				renderTools(s.tools),
 				renderIds(s.blocks.pickaxe),
 				renderIds(s.blocks.shovel),
@@ -165,6 +186,11 @@ public final class ConfigWriter {
 			column += token.length();
 		}
 		return out.append("\n      ]").toString();
+	}
+
+	/** Short enough to stay on one line, unlike the block id lists. */
+	private static String inlineIntArray(final List<Integer> values) {
+		return values.stream().map(String::valueOf).collect(Collectors.joining(", ", "[", "]"));
 	}
 
 	private static String inlineStringArray(final List<String> values) {

@@ -4,6 +4,7 @@ import io.github.tsiw.bulkmine.BulkMine;
 import io.github.tsiw.bulkmine.config.ConfigManager;
 import io.github.tsiw.bulkmine.net.BulkMinePayloads;
 import com.mojang.serialization.Codec;
+import java.util.List;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -55,21 +56,43 @@ public final class PlayerSettings {
 		sync(player);
 	}
 
-	public static boolean toggle(final ServerPlayer player) {
-		boolean next = !isEnabled(player);
-		setEnabled(player, next);
-		return next;
+	/**
+	 * Steps the toggle key on: off, then each of the configured sizes in turn,
+	 * then off again. A size the list does not mention -- one set by hand with
+	 * {@code /bulkmine config size} -- turns off on the next press, which is
+	 * also what happens at the end of the list.
+	 *
+	 * <p>Writes both values before syncing, so the client is never shown a
+	 * half-applied state.
+	 */
+	public static void cycle(final ServerPlayer player) {
+		List<Integer> sizes = ConfigManager.get().server.toggleSizes;
+		int next = 0;
+		if (isEnabled(player)) {
+			int current = sizes.indexOf(cubeSize(player));
+			// A size that is not a step of the cycle has no next step, so the
+			// press falls off the end the same way the last size does.
+			next = current < 0 ? sizes.size() : current + 1;
+		}
+
+		if (next >= sizes.size()) {
+			player.setAttached(ENABLED, Boolean.FALSE);
+		} else {
+			player.setAttached(ENABLED, Boolean.TRUE);
+			player.setAttached(CUBE_SIZE, sizes.get(next));
+		}
+		sync(player);
 	}
 
-	/** The player's own size, clamped to whatever the server currently allows. */
+	/**
+	 * The player's size, clamped to whatever the server currently allows. Until
+	 * they change it -- with the toggle key or the command -- this is just the
+	 * server's starting value, and moving that in the config moves them with it.
+	 */
 	public static int cubeSize(final ServerPlayer player) {
 		Integer chosen = player.getAttached(CUBE_SIZE);
 		int size = chosen == null ? ConfigManager.get().server.defaultCubeSize : chosen;
 		return Math.min(size, ConfigManager.get().server.maxCubeSize);
-	}
-
-	public static boolean hasOwnCubeSize(final ServerPlayer player) {
-		return player.getAttached(CUBE_SIZE) != null;
 	}
 
 	public static void setCubeSize(final ServerPlayer player, final int size) {
