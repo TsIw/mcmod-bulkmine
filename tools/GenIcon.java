@@ -2,6 +2,9 @@
 // Run with JDK 25 single-file source launch, from the project root:
 //   "C:\Program Files\Java\jdk-25.0.4\bin\java.exe" tools/GenIcon.java
 //
+// The same design at another size, e.g. the CurseForge project logo:
+//   "C:\Program Files\Java\jdk-25.0.4\bin\java.exe" tools/GenIcon.java 512 curseforge/logo.png
+//
 // This is a build-time helper and is not shipped inside the mod jar.
 
 import java.awt.Color;
@@ -15,13 +18,18 @@ import java.io.File;
 import javax.imageio.ImageIO;
 
 public class GenIcon {
-	private static final int SIZE = 128;
-	private static final int MARGIN = 12;
+	private static final int DEFAULT_SIZE = 128;
+	private static final String DEFAULT_OUT = "src/main/resources/assets/bulkmine/icon.png";
+	private static int SIZE;
+	private static int MARGIN;
 	private static final Color BACKGROUND = new Color(0x2B, 0x3A, 0x42);
 	private static final Color TEXT = new Color(0xFF, 0xFF, 0xFF);
 	private static final String[] LINES = {"Bulk", "Mine"};
 
 	public static void main(String[] args) throws Exception {
+		SIZE = args.length > 0 ? Integer.parseInt(args[0]) : DEFAULT_SIZE;
+		// Scaled so every size is the same picture: 12px at the original 128.
+		MARGIN = Math.round(SIZE * 12f / DEFAULT_SIZE);
 		BufferedImage image = new BufferedImage(SIZE, SIZE, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = image.createGraphics();
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -51,7 +59,7 @@ public class GenIcon {
 
 		g.dispose();
 
-		File out = new File("src/main/resources/assets/bulkmine/icon.png");
+		File out = new File(args.length > 1 ? args[1] : DEFAULT_OUT);
 		out.getParentFile().mkdirs();
 		ImageIO.write(image, "PNG", out);
 		System.out.println("wrote " + out.getAbsolutePath() + " using font " + font.getFontName());
@@ -64,7 +72,7 @@ public class GenIcon {
 		int usable = SIZE - MARGIN * 2;
 		Font best = new Font("Segoe UI", Font.BOLD, 8);
 
-		for (int size = 8; size <= 64; size++) {
+		for (int size = 8; size <= SIZE / 2; size++) {
 			Font candidate = new Font("Segoe UI", Font.BOLD, size);
 			FontRenderContext frc = g.getFontRenderContext();
 			double widest = 0;

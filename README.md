@@ -1,6 +1,6 @@
 # BulkMine
 
-Minecraft 26.2 / Fabric 用の一括破壊Modです。土や石を立方範囲でまとめて掘り、木を一括で伐採します。キーひとつで切り替えでき、現在の状態は常に画面に表示されます。
+Minecraft 26.1〜26.3 / Fabric 用の一括破壊Modです。土や石を立方範囲でまとめて掘り、木を一括で伐採します。キーひとつで切り替えでき、現在の状態は常に画面に表示されます。
 
 追加アイテムもレシピもありません。既存のツールの挙動を拡張するだけです。
 
@@ -12,10 +12,10 @@ Minecraft 26.2 / Fabric 用の一括破壊Modです。土や石を立方範囲�
 
 | | |
 |---|---|
-| Minecraft | 26.2 |
+| Minecraft | 26.1 / 26.1.1 / 26.1.2 / 26.2 / 26.3 |
 | Mod Loader | Fabric Loader 0.19.3 以上 |
-| 必須Mod | Fabric API 0.156.0+26.2 以上 |
-| Java | 25 以上（Minecraft 26.2 の要件） |
+| 必須Mod | Fabric API（遊ぶMinecraftバージョン用のもの） |
+| Java | 25 以上（Minecraft 26.x の要件） |
 
 ## 導入
 
@@ -280,6 +280,12 @@ gradlew runGametest
 64件のゲームテストが、実際の破壊経路 `ServerPlayerGameMode.destroyBlock` を通して形状・ホワイトリスト・ロール・伐採・耐久・ドロップ位置を検証します。結果は `build/junit.xml` に出ます。
 
 木のテスト（`TreeGameTests`）の後半は、**本体のワールド生成で本物の木を生やして**から伐採します。巨大トウヒの高さやマングローブの根は手で積んだ柱では再現できないためです。テストの格子から離れた座標（x=20000付近）に生成し、テストワールドは実行間で保存されるため毎回その範囲を消去してから生やします。土台の下に石を敷いているのは、マングローブの根が泥を突き抜けて伸び続け、最大長を超えて生成に失敗するのを防ぐためです。
+
+### 対応バージョンの確認方法
+
+ビルドは 26.2 に対して行い、同じ jar を 26.1〜26.3 で使います。対応範囲を確認するときは、作業コピーで `minecraft_version` と `fabric_api_version` だけを差し替え、**26.2 でコンパイルした `build/classes/java/main` と `client` をそのまま置いて** `gradlew runGametest -x compileJava -x compileClientJava` を実行します。ソースを各バージョン向けにコンパイルし直すと、配布する jar そのものの互換性を確かめたことにならないためです（26.x は難読化されていないので、クラスは再マップなしでそのまま読み込まれます）。
+
+26.3 では `ConfiguredFeature` が `Feature` に統合され、`Registries.CONFIGURED_FEATURE` も `Registries.FEATURE` になりました。Mod 本体は使っていませんが、`TreeGameTests` の木を生やす部分がこれを使っているため、26.3 で試すときはそれらを書き換えます。
 
 Fabricのモックプレイヤーは `gameMode()` がCREATIVE固定です。そのままではドロップも耐久消費も発生しないため、テスト側で `abilities.instabuild` を落としています。製品コード側も `isCreative()` ではなく、バニラ自身が使う `preventsBlockDrops()` を見ています。
 
