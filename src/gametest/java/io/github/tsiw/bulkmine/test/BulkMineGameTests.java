@@ -660,7 +660,7 @@ public class BulkMineGameTests {
 	// ------------------------------------------------------------- plumbing
 
 	/** Fresh defaults plus a toggled-on player holding {@code item}. */
-	private static ServerPlayer preparePlayer(final GameTestHelper helper, final net.minecraft.world.item.Item item) {
+	static ServerPlayer preparePlayer(final GameTestHelper helper, final net.minecraft.world.item.Item item) {
 		resetConfig();
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
 
@@ -680,11 +680,11 @@ public class BulkMineGameTests {
 		return PlayerSettings.isEnabled(player) ? "on at " + PlayerSettings.cubeSize(player) : "off";
 	}
 
-	private static BulkMineConfig.Server config() {
+	static BulkMineConfig.Server config() {
 		return ConfigManager.get().server;
 	}
 
-	private static void resetConfig() {
+	static void resetConfig() {
 		// Replaces the live config without touching the file on disk.
 		ConfigManager.replace(new BulkMineConfig());
 		ToolRegistry.reload(ConfigManager.get());
@@ -709,7 +709,7 @@ public class BulkMineGameTests {
 	}
 
 	/** Breaks the block the way the game does, so event ordering is real. */
-	private static void mine(final GameTestHelper helper, final ServerPlayer player, final BlockPos relative) {
+	static void mine(final GameTestHelper helper, final ServerPlayer player, final BlockPos relative) {
 		player.gameMode.destroyBlock(helper.absolutePos(relative));
 	}
 

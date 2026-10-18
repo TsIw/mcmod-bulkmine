@@ -1,56 +1,78 @@
 package io.github.tsiw.bulkmine.mining;
 
+import io.github.tsiw.bulkmine.registry.BlockWhitelist.TreeGroup;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import io.github.tsiw.bulkmine.registry.BlockWhitelist;
+import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Flood fills a tree from the log that was just broken.
+ * Flood fills a tree outward from the block that was just broken.
  *
- * <p>Two deliberate limits keep this from eating builds and from stalling the
- * server: only blocks at or above the broken log are followed, so cutting a
- * trunk halfway leaves the stump and never reaches logs buried underground,
- * and the search stops at a block count and a radius.
+ * <p>Every search follows one tree's own blocks only, and every search but the
+ * canopy around felled logs has a floor it never goes below: cutting a trunk
+ * halfway leaves the stump, and logs buried underground are never reached.
+ * Each also stops at a block count, and logs and roots at a horizontal radius.
  */
 public final class TreeFeller {
 	private TreeFeller() {
 	}
 
+	/** For {@link #collectLeaves}: no floor at all. */
+	public static final int NO_FLOOR = Integer.MIN_VALUE;
+
 	/**
-	 * Connected logs of exactly the same block, searched in all 26 directions
-	 * because jungle and dark oak trunks join diagonally.
+	 * Whether a player placed this leaf. Only leaves can tell: the game marks
+	 * the ones a player puts down so they never decay, and grown ones are not
+	 * marked. Anything without that mark -- logs, roots, mushroom caps --
+	 * counts as grown.
+	 */
+	public static boolean isPlaced(final BlockState state) {
+		return state.hasProperty(LeavesBlock.PERSISTENT) && state.getValue(LeavesBlock.PERSISTENT);
+	}
+
+	/**
+	 * Connected logs of the group, searched in all 26 directions because jungle
+	 * and dark oak trunks join diagonally.
 	 *
-	 * @param origin the already-broken block, used as the search seed and as
-	 *               the floor below which logs are left alone
+	 * <p>The radius is horizontal only. Height is bounded by {@code maxLogs}
+	 * already, and counting it as well cut the top off giant spruce and jungle
+	 * trees, which grow to around 30 blocks.
+	 *
+	 * @param start        where the search begins, and the centre of the radius
+	 * @param includeStart false when the game has already broken {@code start}
+	 * @param floorY       logs below this height are left alone
 	 */
 	public static List<BlockPos> collectLogs(
-			final Level level, final BlockPos origin, final Block log, final int maxLogs, final int radius) {
+			final Level level, final BlockPos start, final boolean includeStart, final TreeGroup group,
+			final int floorY, final int maxLogs, final int radius) {
 		List<BlockPos> found = new ArrayList<>();
 		Set<BlockPos> seen = new HashSet<>();
 		Deque<BlockPos> queue = new ArrayDeque<>();
 
-		seen.add(origin.immutable());
-		queue.add(origin.immutable());
+		BlockPos seed = start.immutable();
+		seen.add(seed);
+		queue.add(seed);
+		if (includeStart) {
+			found.add(seed);
+		}
 
 		while (!queue.isEmpty() && found.size() < maxLogs) {
 			BlockPos current = queue.poll();
 
 			for (BlockPos neighbour : neighbours(current)) {
-				if (neighbour.getY() < origin.getY() || !seen.add(neighbour)) {
+				if (neighbour.getY() < floorY || !seen.add(neighbour)) {
 					continue;
 				}
-				if (chebyshev(origin, neighbour) > radius) {
-					continue;
-				}
-				if (!level.getBlockState(neighbour).is(log)) {
+				if (horizontal(start, neighbour) > radius || !group.isLog(level.getBlockState(neighbour))) {
 					continue;
 				}
 
@@ -66,19 +88,23 @@ public final class TreeFeller {
 	}
 
 	/**
-	 * Blocks on the config's leaf list within {@code distance} steps of any
-	 * felled log. Player-placed (persistent) leaves are cut too -- that is the
-	 * requested behaviour, so a hedge next to a tree will go with it.
+	 * Leaves passing {@code isLeaf} within {@code distance} steps of any seed,
+	 * following leaves only.
+	 *
+	 * @param floorY {@link #NO_FLOOR} around felled logs, where a canopy hangs
+	 *               below the cut; the hit leaf's height when clearing leaves
+	 *               on their own, so that never digs downward
 	 */
 	public static List<BlockPos> collectLeaves(
-			final Level level, final List<BlockPos> logs, final int distance, final int maxLeaves) {
+			final Level level, final Collection<BlockPos> seeds, final Predicate<BlockState> isLeaf,
+			final int floorY, final int distance, final int maxLeaves) {
 		List<BlockPos> found = new ArrayList<>();
 		if (distance <= 0 || maxLeaves <= 0) {
 			return found;
 		}
 
-		Set<BlockPos> seen = new HashSet<>(logs);
-		Deque<BlockPos> frontier = new ArrayDeque<>(logs);
+		Set<BlockPos> seen = new HashSet<>(seeds);
+		Deque<BlockPos> frontier = new ArrayDeque<>(seeds);
 
 		for (int step = 0; step < distance && !frontier.isEmpty() && found.size() < maxLeaves; step++) {
 			Deque<BlockPos> next = new ArrayDeque<>();
@@ -87,11 +113,10 @@ public final class TreeFeller {
 				BlockPos current = frontier.poll();
 
 				for (BlockPos neighbour : neighbours(current)) {
-					if (!seen.add(neighbour)) {
+					if (neighbour.getY() < floorY || !seen.add(neighbour)) {
 						continue;
 					}
-
-					if (!BlockWhitelist.isLeaf(level.getBlockState(neighbour))) {
+					if (!isLeaf.test(level.getBlockState(neighbour))) {
 						continue;
 					}
 
@@ -104,6 +129,98 @@ public final class TreeFeller {
 			}
 
 			frontier = next;
+		}
+
+		return found;
+	}
+
+	/**
+	 * What a search from a hit root found.
+	 *
+	 * @param roots    the roots within reach, at or above the hit one
+	 * @param firstLog the nearest of the group's logs those roots led to, or
+	 *                 null when they led to none
+	 */
+	public record RootSearch(List<BlockPos> roots, BlockPos firstLog) {
+	}
+
+	/**
+	 * Follows roots outward from the one that was hit, at or above its height
+	 * and up to {@code distance} steps away, watching for the tree's trunk.
+	 * Stops as soon as the trunk turns up, since the caller fells the tree
+	 * from there instead.
+	 */
+	public static RootSearch searchRoots(
+			final Level level, final BlockPos origin, final TreeGroup group, final int distance, final int maxRoots) {
+		List<BlockPos> found = new ArrayList<>();
+		Set<BlockPos> seen = new HashSet<>();
+		Deque<BlockPos> frontier = new ArrayDeque<>();
+		seen.add(origin.immutable());
+		frontier.add(origin.immutable());
+
+		for (int step = 0; step < distance && !frontier.isEmpty(); step++) {
+			Deque<BlockPos> next = new ArrayDeque<>();
+
+			while (!frontier.isEmpty()) {
+				BlockPos current = frontier.poll();
+
+				for (BlockPos neighbour : neighbours(current)) {
+					if (neighbour.getY() < origin.getY() || !seen.add(neighbour)) {
+						continue;
+					}
+
+					BlockState state = level.getBlockState(neighbour);
+					if (group.isLog(state)) {
+						return new RootSearch(found, neighbour);
+					}
+					if (!group.isRoot(state) || found.size() >= maxRoots) {
+						continue;
+					}
+
+					found.add(neighbour);
+					next.add(neighbour);
+				}
+			}
+
+			frontier = next;
+		}
+
+		return new RootSearch(found, null);
+	}
+
+	/**
+	 * The roots of a tree being felled from one of them: every root joined to
+	 * the seeds through other roots, at or above {@code floorY}, within the
+	 * horizontal radius of the trunk.
+	 *
+	 * <p>Roots cannot be told apart by tree, so where a neighbour's roots
+	 * touch these, the part inside the radius goes too. Its trunk never does:
+	 * logs are only ever found through other logs.
+	 */
+	public static List<BlockPos> collectTreeRoots(
+			final Level level, final Collection<BlockPos> seeds, final TreeGroup group, final int floorY,
+			final BlockPos centre, final int radius, final int maxRoots) {
+		List<BlockPos> found = new ArrayList<>();
+		Set<BlockPos> seen = new HashSet<>(seeds);
+		Deque<BlockPos> queue = new ArrayDeque<>(seeds);
+
+		while (!queue.isEmpty() && found.size() < maxRoots) {
+			BlockPos current = queue.poll();
+
+			for (BlockPos neighbour : neighbours(current)) {
+				if (neighbour.getY() < floorY || !seen.add(neighbour)) {
+					continue;
+				}
+				if (horizontal(centre, neighbour) > radius || !group.isRoot(level.getBlockState(neighbour))) {
+					continue;
+				}
+
+				found.add(neighbour);
+				if (found.size() >= maxRoots) {
+					break;
+				}
+				queue.add(neighbour);
+			}
 		}
 
 		return found;
@@ -124,8 +241,7 @@ public final class TreeFeller {
 		return result;
 	}
 
-	private static int chebyshev(final BlockPos a, final BlockPos b) {
-		return Math.max(Math.abs(a.getX() - b.getX()),
-				Math.max(Math.abs(a.getY() - b.getY()), Math.abs(a.getZ() - b.getZ())));
+	private static int horizontal(final BlockPos a, final BlockPos b) {
+		return Math.max(Math.abs(a.getX() - b.getX()), Math.abs(a.getZ() - b.getZ()));
 	}
 }

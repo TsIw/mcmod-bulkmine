@@ -26,6 +26,7 @@
 	"bulkmine.command.block.not_listed": "%s はどの一覧にも入っていません",
 	"bulkmine.command.block.denied": "%s をブラックリストに追加しました",
 	"bulkmine.command.block.allowed": "%s をブラックリストから外しました",
+	"bulkmine.command.block.in_tree": "%s は設定ファイルの %s に含まれています。設定ファイルで編集するか、deny で除外してください",
 	"bulkmine.command.block.list.header": "ブロック一覧:",
 	"bulkmine.command.block.list.hint": "完全な一覧は config/bulkmine.json にあります",
 
@@ -33,5 +34,7 @@
 	"bulkmine.command.error.not_a_block": "%s は設置可能なブロックではありません",
 	"bulkmine.command.error.empty_hand": "何も持っていません",
 	"bulkmine.command.error.bad_role": "不明なロール '%s'（pickaxe / axe / shovel / all のいずれか）",
+	"bulkmine.command.error.bad_kind": "不明な種類 '%s'（pickaxe / shovel / log / leaves のいずれか）",
+	"bulkmine.command.error.mixed_kinds": "log と leaves は他の種類と組み合わせられません",
 	"bulkmine.command.error.bad_size": "サイズは 1〜%s の奇数で指定してください"
 }

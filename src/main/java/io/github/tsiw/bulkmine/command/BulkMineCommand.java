@@ -3,6 +3,7 @@ package io.github.tsiw.bulkmine.command;
 import io.github.tsiw.bulkmine.Role;
 import io.github.tsiw.bulkmine.config.BulkMineConfig;
 import io.github.tsiw.bulkmine.config.ConfigManager;
+import io.github.tsiw.bulkmine.registry.BlockWhitelist;
 import io.github.tsiw.bulkmine.registry.ToolRegistry;
 import io.github.tsiw.bulkmine.state.PlayerSettings;
 import com.mojang.brigadier.CommandDispatcher;
@@ -52,6 +53,10 @@ public final class BulkMineCommand {
 			new SimpleCommandExceptionType(Component.translatable("bulkmine.command.error.empty_hand"));
 	private static final DynamicCommandExceptionType NOT_A_BLOCK =
 			new DynamicCommandExceptionType(name -> Component.translatable("bulkmine.command.error.not_a_block", name));
+	private static final DynamicCommandExceptionType BAD_KIND =
+			new DynamicCommandExceptionType(name -> Component.translatable("bulkmine.command.error.bad_kind", name));
+	private static final SimpleCommandExceptionType MIXED_KINDS =
+			new SimpleCommandExceptionType(Component.translatable("bulkmine.command.error.mixed_kinds"));
 	private static final DynamicCommandExceptionType BAD_SIZE =
 			new DynamicCommandExceptionType(max -> Component.translatable("bulkmine.command.error.bad_size", max));
 
@@ -107,11 +112,11 @@ public final class BulkMineCommand {
 				.requires(BulkMineCommand::canManage)
 				.then(Commands.literal("add")
 						.then(Commands.literal("hand")
-								.then(rolesArgument().executes(context -> addBlock(
-										context, heldBlock(context), roles(context)))))
+								.then(kindsArgument().executes(context -> addBlock(
+										context, heldBlock(context), kinds(context)))))
 						.then(Commands.argument("block", ResourceArgument.resource(build, Registries.BLOCK))
-								.then(rolesArgument().executes(context -> addBlock(
-										context, blockArgument(context), roles(context))))))
+								.then(kindsArgument().executes(context -> addBlock(
+										context, blockArgument(context), kinds(context))))))
 				.then(Commands.literal("remove")
 						.then(Commands.literal("hand")
 								.executes(context -> removeBlock(context, heldBlock(context))))
@@ -185,7 +190,9 @@ public final class BulkMineCommand {
 		line(source, "maxCubeSize", String.valueOf(server.maxCubeSize));
 		line(source, "breakLeaves", server.breakLeaves + " (distance " + server.leafDistance + ")");
 		line(source, "maxLogs / maxLeaves", server.maxLogs + " / " + server.maxLeaves);
-		line(source, "treeRadius", String.valueOf(server.treeRadius));
+		line(source, "distinguishPlacedLeaves", String.valueOf(server.distinguishPlacedLeaves));
+		line(source, "rootDistance / maxRoots", server.rootDistance + " / " + server.maxRoots);
+		line(source, "treeRadius", server.treeRadius + " (horizontal)");
 		line(source, "aggregateDrops", String.valueOf(server.aggregateDrops));
 		line(source, "allowWhileSneaking", String.valueOf(server.allowWhileSneaking));
 		line(source, "requireCorrectTool", String.valueOf(server.requireCorrectTool));
@@ -262,14 +269,103 @@ public final class BulkMineCommand {
 
 	// --------------------------------------------------------------- blocks
 
-	private static int addBlock(final CommandContext<CommandSourceStack> context, final Block block, final Set<Role> roles) {
-		String id = BuiltInRegistries.BLOCK.getKey(block).toString();
-		BulkMineConfig.Blocks blocks = ConfigManager.get().server.blocks;
+	/**
+	 * What a block can be added as. Not the same as a tool {@link Role}: the
+	 * cube kinds combine, but a log or a leaf joins the custom tree and is
+	 * felled rather than dug, so it stands alone.
+	 */
+	private enum BlockKind {
+		PICKAXE,
+		SHOVEL,
+		LOG,
+		LEAVES;
 
+		String serialized() {
+			return name().toLowerCase(Locale.ROOT);
+		}
+
+		boolean isTree() {
+			return this == LOG || this == LEAVES;
+		}
+
+		/** {@code axe} is still accepted for log, which is what it meant before trees were grouped. */
+		static BlockKind byName(final String name) {
+			String lower = name.toLowerCase(Locale.ROOT);
+			if (lower.equals("axe")) {
+				return LOG;
+			}
+			for (BlockKind kind : values()) {
+				if (kind.serialized().equals(lower)) {
+					return kind;
+				}
+			}
+			return null;
+		}
+	}
+
+	private static final SuggestionProvider<CommandSourceStack> KIND_SUGGESTIONS = (context, builder) -> {
+		String remaining = builder.getRemaining();
+		int separator = Math.max(remaining.lastIndexOf('|'), remaining.lastIndexOf(','));
+		String prefix = separator < 0 ? "" : remaining.substring(0, separator + 1);
+		String partial = remaining.substring(separator + 1).toLowerCase(Locale.ROOT);
+
+		for (BlockKind kind : BlockKind.values()) {
+			// Only the cube kinds continue after a separator.
+			if (kind.serialized().startsWith(partial) && (prefix.isEmpty() || !kind.isTree())) {
+				builder.suggest(prefix + kind.serialized());
+			}
+		}
+		return builder.buildFuture();
+	};
+
+	private static RequiredArgumentBuilder<CommandSourceStack, String> kindsArgument() {
+		return Commands.argument("kinds", StringArgumentType.word()).suggests(KIND_SUGGESTIONS);
+	}
+
+	/** One kind, or cube kinds joined by {@code |} or {@code ,}. */
+	private static Set<BlockKind> kinds(final CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+		String raw = StringArgumentType.getString(context, "kinds");
+		EnumSet<BlockKind> parsed = EnumSet.noneOf(BlockKind.class);
+
+		for (String token : raw.split("[|,]")) {
+			String trimmed = token.trim();
+			if (trimmed.isEmpty()) {
+				continue;
+			}
+			BlockKind kind = BlockKind.byName(trimmed);
+			if (kind == null) {
+				throw BAD_KIND.create(trimmed);
+			}
+			parsed.add(kind);
+		}
+
+		if (parsed.isEmpty()) {
+			throw BAD_KIND.create(raw);
+		}
+		if (parsed.size() > 1 && parsed.stream().anyMatch(BlockKind::isTree)) {
+			throw MIXED_KINDS.create();
+		}
+		return parsed;
+	}
+
+	/**
+	 * Sets the block to exactly these kinds, taking it off any list it is no
+	 * longer meant to be on. Refused for a block a file-managed tree claims:
+	 * that tree is edited in the file, and putting the block anywhere else
+	 * would either be ignored or let the custom tree reach into it.
+	 */
+	private static int addBlock(
+			final CommandContext<CommandSourceStack> context, final Block block, final Set<BlockKind> kinds) {
+		String id = BuiltInRegistries.BLOCK.getKey(block).toString();
+		if (refuseFileTree(context, block, id)) {
+			return 0;
+		}
+
+		BulkMineConfig.Blocks blocks = ConfigManager.get().server.blocks;
 		blocks.blacklist.remove(id);
-		for (Role role : Role.values()) {
-			List<String> list = listFor(blocks, role);
-			if (roles.contains(role)) {
+		for (BlockKind kind : BlockKind.values()) {
+			List<String> list = listFor(blocks, kind);
+			if (kinds.contains(kind)) {
 				if (!list.contains(id)) {
 					list.add(id);
 				}
@@ -279,8 +375,9 @@ public final class BulkMineCommand {
 		}
 
 		persist();
+		String described = kinds.stream().map(BlockKind::serialized).collect(Collectors.joining("|"));
 		context.getSource().sendSuccess(
-				() -> Component.translatable("bulkmine.command.block.added", id, describe(roles)), true);
+				() -> Component.translatable("bulkmine.command.block.added", id, described), true);
 		return 1;
 	}
 
@@ -289,12 +386,16 @@ public final class BulkMineCommand {
 		BulkMineConfig.Blocks blocks = ConfigManager.get().server.blocks;
 
 		boolean found = false;
-		for (Role role : Role.values()) {
-			found |= listFor(blocks, role).remove(id);
+		for (BlockKind kind : BlockKind.values()) {
+			found |= listFor(blocks, kind).remove(id);
 		}
-		found |= blocks.leaves.remove(id);
+		// Roots are only ever listed by hand, but taking one out is harmless.
+		found |= blocks.customTree.roots.remove(id);
 
 		if (!found) {
+			if (refuseFileTree(context, block, id)) {
+				return 0;
+			}
 			context.getSource().sendFailure(Component.translatable("bulkmine.command.block.not_listed", id));
 			return 0;
 		}
@@ -302,6 +403,17 @@ public final class BulkMineCommand {
 		persist();
 		context.getSource().sendSuccess(() -> Component.translatable("bulkmine.command.block.removed", id), true);
 		return 1;
+	}
+
+	/** Reports and returns true when a file-managed tree owns this block. */
+	private static boolean refuseFileTree(
+			final CommandContext<CommandSourceStack> context, final Block block, final String id) {
+		BlockWhitelist.TreeGroup owner = BlockWhitelist.fileTreeOwning(block.defaultBlockState());
+		if (owner == null) {
+			return false;
+		}
+		context.getSource().sendFailure(Component.translatable("bulkmine.command.block.in_tree", id, owner.label()));
+		return true;
 	}
 
 	private static int denyBlock(final CommandContext<CommandSourceStack> context, final Block block, final boolean deny) {
@@ -329,20 +441,24 @@ public final class BulkMineCommand {
 		source.sendSuccess(() -> Component.translatable("bulkmine.command.block.list.header"), false);
 		line(source, "pickaxe", blocks.pickaxe.size() + " entries");
 		line(source, "shovel", blocks.shovel.size() + " entries");
-		line(source, "fellable", blocks.fellable.size() + " entries");
-		line(source, "leaves", blocks.leaves.size() + " entries");
+		line(source, "trees", blocks.trees.stream()
+				.map(tree -> tree.name.isBlank() ? "?" : tree.name)
+				.collect(Collectors.joining(", ")));
+		line(source, "customTree", blocks.customTree.logs.size() + " logs, "
+				+ blocks.customTree.leaves.size() + " leaves, "
+				+ blocks.customTree.roots.size() + " roots");
 		line(source, "blacklist", blocks.blacklist.isEmpty()
 				? "(empty)" : String.join(", ", blocks.blacklist));
 		source.sendSuccess(() -> Component.translatable("bulkmine.command.block.list.hint"), false);
 		return 1;
 	}
 
-	/** Leaves are not a {@link Role}; only the three mining lists map to one. */
-	private static List<String> listFor(final BulkMineConfig.Blocks blocks, final Role role) {
-		return switch (role) {
+	private static List<String> listFor(final BulkMineConfig.Blocks blocks, final BlockKind kind) {
+		return switch (kind) {
 			case PICKAXE -> blocks.pickaxe;
 			case SHOVEL -> blocks.shovel;
-			case AXE -> blocks.fellable;
+			case LOG -> blocks.customTree.logs;
+			case LEAVES -> blocks.customTree.leaves;
 		};
 	}
 
@@ -351,7 +467,7 @@ public final class BulkMineCommand {
 	private static int reload(final CommandContext<CommandSourceStack> context) {
 		ConfigManager.load();
 		ToolRegistry.reload(ConfigManager.get());
-		io.github.tsiw.bulkmine.registry.BlockWhitelist.reload(ConfigManager.get());
+		BlockWhitelist.reload(ConfigManager.get());
 		context.getSource().sendSuccess(() -> Component.translatable("bulkmine.command.reloaded"), true);
 		return 1;
 	}
@@ -359,7 +475,7 @@ public final class BulkMineCommand {
 	private static void persist() {
 		ConfigManager.save();
 		ToolRegistry.reload(ConfigManager.get());
-		io.github.tsiw.bulkmine.registry.BlockWhitelist.reload(ConfigManager.get());
+		BlockWhitelist.reload(ConfigManager.get());
 	}
 
 	// ------------------------------------------------------------- plumbing

@@ -26,6 +26,7 @@
 	"bulkmine.command.block.not_listed": "%s is not on any block list",
 	"bulkmine.command.block.denied": "Blacklisted %s",
 	"bulkmine.command.block.allowed": "Removed %s from the blacklist",
+	"bulkmine.command.block.in_tree": "%s belongs to %s in config/bulkmine.json -- edit it there, or use deny to exclude it",
 	"bulkmine.command.block.list.header": "Block lists:",
 	"bulkmine.command.block.list.hint": "Full lists are in config/bulkmine.json",
 
@@ -33,5 +34,7 @@
 	"bulkmine.command.error.not_a_block": "%s is not a placeable block",
 	"bulkmine.command.error.empty_hand": "You are not holding anything",
 	"bulkmine.command.error.bad_role": "Unknown role '%s' (expected pickaxe, axe, shovel or all)",
+	"bulkmine.command.error.bad_kind": "Unknown kind '%s' (expected pickaxe, shovel, log or leaves)",
+	"bulkmine.command.error.mixed_kinds": "log and leaves cannot be combined with any other kind",
 	"bulkmine.command.error.bad_size": "Size must be an odd number from 1 to %s"
 }

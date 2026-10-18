@@ -11,7 +11,8 @@
 			"io.github.tsiw.bulkmine.test.AttachmentProbe"
 		],
 		"fabric-gametest": [
-			"io.github.tsiw.bulkmine.test.BulkMineGameTests"
+			"io.github.tsiw.bulkmine.test.BulkMineGameTests",
+			"io.github.tsiw.bulkmine.test.TreeGameTests"
 		]
 	},
 	"depends": {

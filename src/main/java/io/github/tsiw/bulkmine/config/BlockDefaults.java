@@ -1,5 +1,6 @@
 package io.github.tsiw.bulkmine.config;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -104,32 +105,54 @@ final class BlockDefaults {
 			"minecraft:soul_sand",
 			"minecraft:soul_soil");
 
-	static final List<String> FELLABLE = List.of(
-			"minecraft:oak_log",
-			"minecraft:spruce_log",
-			"minecraft:birch_log",
-			"minecraft:jungle_log",
-			"minecraft:acacia_log",
-			"minecraft:dark_oak_log",
-			"minecraft:pale_oak_log",
-			"minecraft:cherry_log",
-			"minecraft:mangrove_log",
-			"minecraft:crimson_stem",
-			"minecraft:warped_stem",
-			"minecraft:brown_mushroom_block",
-			"minecraft:red_mushroom_block",
-			"minecraft:mushroom_stem");
+	/**
+	 * One entry per kind of tree. Felling only ever touches the blocks of the
+	 * tree whose log was cut, so a dark oak no longer chews into the huge
+	 * mushroom growing against it, and one oak never strips its birch
+	 * neighbour.
+	 *
+	 * <p>The pairings follow how the game actually grows each tree: azalea
+	 * trees grow on oak logs, so their leaves belong with oak. The jungle bush
+	 * also grows oak leaves on a jungle log, but those are deliberately left
+	 * out of jungle -- it would let every jungle tree reach into the fancy oaks
+	 * that share its biome, and a bush's leftover leaves decay on their own.
+	 *
+	 * <p>Muddy mangrove roots are not here: they are treated as soil and dug
+	 * with the shovel cube like mud.
+	 */
+	static List<BulkMineConfig.Tree> trees() {
+		return new ArrayList<>(List.of(
+				tree("oak", List.of("minecraft:oak_log"),
+						List.of("minecraft:oak_leaves", "minecraft:azalea_leaves",
+								"minecraft:flowering_azalea_leaves")),
+				tree("spruce", List.of("minecraft:spruce_log"), List.of("minecraft:spruce_leaves")),
+				tree("birch", List.of("minecraft:birch_log"), List.of("minecraft:birch_leaves")),
+				tree("jungle", List.of("minecraft:jungle_log"), List.of("minecraft:jungle_leaves")),
+				tree("acacia", List.of("minecraft:acacia_log"), List.of("minecraft:acacia_leaves")),
+				tree("dark_oak", List.of("minecraft:dark_oak_log"), List.of("minecraft:dark_oak_leaves")),
+				tree("pale_oak", List.of("minecraft:pale_oak_log"), List.of("minecraft:pale_oak_leaves")),
+				tree("cherry", List.of("minecraft:cherry_log"), List.of("minecraft:cherry_leaves")),
+				tree("mangrove", List.of("minecraft:mangrove_log"), List.of("minecraft:mangrove_leaves"),
+						List.of("minecraft:mangrove_roots")),
+				tree("crimson_fungus", List.of("minecraft:crimson_stem"),
+						List.of("minecraft:nether_wart_block", "minecraft:shroomlight")),
+				tree("warped_fungus", List.of("minecraft:warped_stem"),
+						List.of("minecraft:warped_wart_block", "minecraft:shroomlight")),
+				tree("huge_mushroom", List.of("minecraft:mushroom_stem"),
+						List.of("minecraft:red_mushroom_block", "minecraft:brown_mushroom_block"))));
+	}
 
-	static final List<String> LEAVES = List.of(
-			"minecraft:oak_leaves",
-			"minecraft:spruce_leaves",
-			"minecraft:birch_leaves",
-			"minecraft:jungle_leaves",
-			"minecraft:acacia_leaves",
-			"minecraft:dark_oak_leaves",
-			"minecraft:pale_oak_leaves",
-			"minecraft:cherry_leaves",
-			"minecraft:mangrove_leaves",
-			"minecraft:azalea_leaves",
-			"minecraft:flowering_azalea_leaves");
+	private static BulkMineConfig.Tree tree(final String name, final List<String> logs, final List<String> leaves) {
+		return tree(name, logs, leaves, List.of());
+	}
+
+	private static BulkMineConfig.Tree tree(
+			final String name, final List<String> logs, final List<String> leaves, final List<String> roots) {
+		BulkMineConfig.Tree tree = new BulkMineConfig.Tree();
+		tree.name = name;
+		tree.logs = new ArrayList<>(logs);
+		tree.leaves = new ArrayList<>(leaves);
+		tree.roots = new ArrayList<>(roots);
+		return tree;
+	}
 }

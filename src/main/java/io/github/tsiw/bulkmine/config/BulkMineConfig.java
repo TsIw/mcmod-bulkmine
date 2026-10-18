@@ -27,8 +27,19 @@ public final class BulkMineConfig {
 		public List<Integer> toggleSizes = new ArrayList<>(List.of(3, 5));
 		public boolean breakLeaves = true;
 		public int leafDistance = 6;
+		/**
+		 * Whether leaves a player placed are kept apart from naturally grown
+		 * ones. When on, a swing that starts from anything natural -- and logs
+		 * and roots always count as natural, since the game cannot tell -- never
+		 * reaches placed leaves; a swing that starts on a placed leaf takes both.
+		 */
+		public boolean distinguishPlacedLeaves = true;
+		/** How far roots are followed from a root that was hit, in blocks. */
+		public int rootDistance = 6;
 		public int maxLogs = 256;
 		public int maxLeaves = 1024;
+		public int maxRoots = 256;
+		/** Horizontal only: height is already bounded by maxLogs. */
 		public int treeRadius = 16;
 		public boolean aggregateDrops = true;
 		public boolean allowWhileSneaking = true;
@@ -68,10 +79,33 @@ public final class BulkMineConfig {
 	public static final class Blocks {
 		public List<String> pickaxe = new ArrayList<>(BlockDefaults.PICKAXE);
 		public List<String> shovel = new ArrayList<>(BlockDefaults.SHOVEL);
-		public List<String> fellable = new ArrayList<>(BlockDefaults.FELLABLE);
-		public List<String> leaves = new ArrayList<>(BlockDefaults.LEAVES);
+		/** File-managed: one entry per kind of tree. Commands never change these. */
+		public List<Tree> trees = BlockDefaults.trees();
+		/** Command-managed, and one group: its logs and leaves mix freely. */
+		public Tree customTree = new Tree();
 		/** Wins over every list above. */
 		public List<String> blacklist = new ArrayList<>();
+
+		/**
+		 * The flat lists from before trees were grouped. Only ever read, from an
+		 * old file, and folded into the groups by {@link #sanitise} -- after
+		 * which they stay null and are never written back.
+		 */
+		public List<String> fellable;
+		public List<String> leaves;
+	}
+
+	/**
+	 * The blocks that make up one kind of tree. Felling from one of its logs
+	 * touches only these, never another tree's.
+	 */
+	public static final class Tree {
+		/** For people reading the file and for log messages; has no effect. */
+		public String name = "";
+		public List<String> logs = new ArrayList<>();
+		public List<String> leaves = new ArrayList<>();
+		/** Followed below the trunk only when a root itself is hit. */
+		public List<String> roots = new ArrayList<>();
 	}
 
 	/**
@@ -97,9 +131,17 @@ public final class BulkMineConfig {
 		}
 		server.blocks.pickaxe = orEmpty(server.blocks.pickaxe);
 		server.blocks.shovel = orEmpty(server.blocks.shovel);
-		server.blocks.fellable = orEmpty(server.blocks.fellable);
-		server.blocks.leaves = orEmpty(server.blocks.leaves);
 		server.blocks.blacklist = orEmpty(server.blocks.blacklist);
+		if (server.blocks.trees == null) {
+			server.blocks.trees = BlockDefaults.trees();
+		}
+		server.blocks.trees.removeIf(tree -> tree == null);
+		server.blocks.trees.forEach(BulkMineConfig::repair);
+		if (server.blocks.customTree == null) {
+			server.blocks.customTree = new Tree();
+		}
+		repair(server.blocks.customTree);
+		migrateFlatLists(server.blocks, problems);
 
 		server.maxCubeSize = clampOdd("maxCubeSize", server.maxCubeSize, 9, problems);
 		server.defaultCubeSize = clampOdd("defaultCubeSize", server.defaultCubeSize, 3, problems);
@@ -123,6 +165,8 @@ public final class BulkMineConfig {
 		server.leafDistance = clamp("leafDistance", server.leafDistance, 0, 32, 6, problems);
 		server.maxLogs = clamp("maxLogs", server.maxLogs, 1, 8192, 256, problems);
 		server.maxLeaves = clamp("maxLeaves", server.maxLeaves, 0, 16384, 1024, problems);
+		server.rootDistance = clamp("rootDistance", server.rootDistance, 0, 32, 6, problems);
+		server.maxRoots = clamp("maxRoots", server.maxRoots, 0, 8192, 256, problems);
 		server.treeRadius = clamp("treeRadius", server.treeRadius, 1, 64, 16, problems);
 
 		server.tools.removeIf(entry -> {
@@ -168,6 +212,57 @@ public final class BulkMineConfig {
 			kept.add(server.defaultCubeSize);
 		}
 		return kept;
+	}
+
+	private static void repair(final Tree tree) {
+		if (tree.name == null) {
+			tree.name = "";
+		}
+		tree.logs = orEmpty(tree.logs);
+		tree.leaves = orEmpty(tree.leaves);
+		tree.roots = orEmpty(tree.roots);
+	}
+
+	/**
+	 * Folds the pre-1.2 {@code fellable} / {@code leaves} lists into the tree
+	 * groups. Anything a tree already lists -- in any role, so the nether wart
+	 * people used to put under fellable lands as that fungus's canopy -- is
+	 * dropped as covered; anything else was added by hand and moves to the
+	 * custom group, so nothing is lost.
+	 */
+	private static void migrateFlatLists(final Blocks blocks, final List<String> problems) {
+		if (blocks.fellable == null && blocks.leaves == null) {
+			return;
+		}
+
+		List<String> covered = new ArrayList<>();
+		for (Tree tree : blocks.trees) {
+			covered.addAll(tree.logs);
+			covered.addAll(tree.leaves);
+			covered.addAll(tree.roots);
+		}
+
+		int moved = moveUncovered(blocks.fellable, covered, blocks.customTree.logs)
+				+ moveUncovered(blocks.leaves, covered, blocks.customTree.leaves);
+		problems.add("migrated the old fellable/leaves lists into tree groups"
+				+ (moved == 0 ? "" : ", " + moved + " hand-added entries moved to customTree"));
+
+		blocks.fellable = null;
+		blocks.leaves = null;
+	}
+
+	private static int moveUncovered(final List<String> from, final List<String> covered, final List<String> to) {
+		if (from == null) {
+			return 0;
+		}
+		int moved = 0;
+		for (String id : from) {
+			if (id != null && !covered.contains(id) && !to.contains(id)) {
+				to.add(id);
+				moved++;
+			}
+		}
+		return moved;
 	}
 
 	private static List<String> orEmpty(final List<String> list) {
