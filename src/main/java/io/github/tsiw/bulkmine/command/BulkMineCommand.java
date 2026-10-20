@@ -191,7 +191,7 @@ public final class BulkMineCommand {
 		line(source, "breakLeaves", server.breakLeaves + " (distance " + server.leafDistance + ")");
 		line(source, "maxLogs / maxLeaves", server.maxLogs + " / " + server.maxLeaves);
 		line(source, "distinguishPlacedLeaves", String.valueOf(server.distinguishPlacedLeaves));
-		line(source, "rootDistance / maxRoots", server.rootDistance + " / " + server.maxRoots);
+		line(source, "rootRadius / maxRoots", server.rootRadius + " / " + server.maxRoots);
 		line(source, "treeRadius", server.treeRadius + " (horizontal)");
 		line(source, "aggregateDrops", String.valueOf(server.aggregateDrops));
 		line(source, "allowWhileSneaking", String.valueOf(server.allowWhileSneaking));

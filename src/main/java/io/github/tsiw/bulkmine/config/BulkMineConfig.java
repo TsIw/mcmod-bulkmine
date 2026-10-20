@@ -34,8 +34,14 @@ public final class BulkMineConfig {
 		 * reaches placed leaves; a swing that starts on a placed leaf takes both.
 		 */
 		public boolean distinguishPlacedLeaves = true;
-		/** How far roots are followed from a root that was hit, in blocks. */
-		public int rootDistance = 6;
+		/** How far out roots are followed from a root that was hit, horizontally. */
+		public int rootRadius = 10;
+		/**
+		 * Before 1.2.2: how many steps along the roots were followed. Only ever
+		 * read, from an old file, and turned into {@link #rootRadius} by
+		 * {@link #sanitise} -- after which it stays null and is never written back.
+		 */
+		public Integer rootDistance;
 		public int maxLogs = 256;
 		public int maxLeaves = 1024;
 		public int maxRoots = 256;
@@ -165,7 +171,8 @@ public final class BulkMineConfig {
 		server.leafDistance = clamp("leafDistance", server.leafDistance, 0, 32, 6, problems);
 		server.maxLogs = clamp("maxLogs", server.maxLogs, 1, 8192, 256, problems);
 		server.maxLeaves = clamp("maxLeaves", server.maxLeaves, 0, 16384, 1024, problems);
-		server.rootDistance = clamp("rootDistance", server.rootDistance, 0, 32, 6, problems);
+		migrateRootDistance(server, problems);
+		server.rootRadius = clamp("rootRadius", server.rootRadius, 0, 32, 10, problems);
 		server.maxRoots = clamp("maxRoots", server.maxRoots, 0, 8192, 256, problems);
 		server.treeRadius = clamp("treeRadius", server.treeRadius, 1, 64, 16, problems);
 
@@ -221,6 +228,23 @@ public final class BulkMineConfig {
 		tree.logs = orEmpty(tree.logs);
 		tree.leaves = orEmpty(tree.leaves);
 		tree.roots = orEmpty(tree.roots);
+	}
+
+	/**
+	 * Carries the pre-1.2.2 {@code rootDistance} over to {@code rootRadius}.
+	 * The old default of 6 steps is what fell short of tall mangroves, so it
+	 * becomes the new default rather than a radius of 6; any other value was
+	 * picked by hand and is kept as the radius.
+	 */
+	private static void migrateRootDistance(final Server server, final List<String> problems) {
+		if (server.rootDistance == null) {
+			return;
+		}
+
+		int old = server.rootDistance;
+		server.rootRadius = old == 6 ? new Server().rootRadius : old;
+		problems.add("migrated rootDistance " + old + " to rootRadius " + server.rootRadius);
+		server.rootDistance = null;
 	}
 
 	/**

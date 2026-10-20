@@ -269,23 +269,42 @@ public class TreeGameTests {
 	// --------------------------------------------------------------- roots
 
 	@GameTest(structure = EMPTY)
-	public void rootsWithNoTrunkClearAsFarAsRootDistance(final GameTestHelper helper) {
+	public void rootsWithNoTrunkClearAsFarOutAsRootRadius(final GameTestHelper helper) {
 		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_AXE);
 
-		for (int x = 1; x <= 9; x++) {
+		for (int x = 1; x <= 13; x++) {
 			helper.setBlock(new BlockPos(x, 2, 2), Blocks.MANGROVE_ROOTS);
 		}
 		helper.setBlock(new BlockPos(1, 1, 2), Blocks.MANGROVE_ROOTS);
 
 		mine(helper, player, new BlockPos(1, 2, 2));
 
-		// rootDistance is 6: six steps out go, the seventh stays.
-		for (int x = 2; x <= 7; x++) {
+		// rootRadius is 10: ten out go, the eleventh stays.
+		for (int x = 2; x <= 11; x++) {
 			helper.assertBlockNotPresent(Blocks.MANGROVE_ROOTS, new BlockPos(x, 2, 2));
 		}
-		helper.assertBlockPresent(Blocks.MANGROVE_ROOTS, new BlockPos(8, 2, 2));
+		helper.assertBlockPresent(Blocks.MANGROVE_ROOTS, new BlockPos(12, 2, 2));
 		// And never below the root that was hit.
 		helper.assertBlockPresent(Blocks.MANGROVE_ROOTS, new BlockPos(1, 1, 2));
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void rootsAreFollowedUpWithoutAHeightLimit(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_AXE);
+
+		// Further up than the radius, and further than the old six steps.
+		for (int y = 1; y <= 14; y++) {
+			helper.setBlock(new BlockPos(2, y, 2), Blocks.MANGROVE_ROOTS);
+		}
+		helper.setBlock(new BlockPos(2, 15, 2), Blocks.MANGROVE_LOG);
+
+		mine(helper, player, new BlockPos(2, 1, 2));
+
+		helper.assertBlockNotPresent(Blocks.MANGROVE_LOG, new BlockPos(2, 15, 2));
+		for (int y = 2; y <= 14; y++) {
+			helper.assertBlockNotPresent(Blocks.MANGROVE_ROOTS, new BlockPos(2, y, 2));
+		}
 		helper.succeed();
 	}
 
@@ -378,6 +397,28 @@ public class TreeGameTests {
 		helper.succeed();
 	}
 
+	@GameTest(structure = EMPTY)
+	public void oldRootDistanceMigratesToRootRadius(final GameTestHelper helper) {
+		// The old default of 6 steps fell short, so it becomes the new default.
+		BulkMineConfig config = new Gson().fromJson("{ \"server\": { \"rootDistance\": 6 } }", BulkMineConfig.class);
+		List<String> problems = config.sanitise();
+		helper.assertTrue(config.server.rootRadius == 10, "6 became " + config.server.rootRadius);
+		helper.assertTrue(config.server.rootDistance == null, "old key should be gone");
+		helper.assertTrue(problems.stream().anyMatch(p -> p.contains("rootRadius")), "migration was not reported");
+
+		// A value picked by hand is kept.
+		config = new Gson().fromJson("{ \"server\": { \"rootDistance\": 4 } }", BulkMineConfig.class);
+		config.sanitise();
+		helper.assertTrue(config.server.rootRadius == 4, "4 became " + config.server.rootRadius);
+
+		// A new file has nothing to migrate.
+		config = new Gson().fromJson("{ \"server\": { \"rootRadius\": 6 } }", BulkMineConfig.class);
+		problems = config.sanitise();
+		helper.assertTrue(config.server.rootRadius == 6, "6 became " + config.server.rootRadius);
+		helper.assertTrue(problems.stream().noneMatch(p -> p.contains("rootRadius")), "nothing to migrate");
+		helper.succeed();
+	}
+
 	// ------------------------------------------------- real, grown trees
 
 	@GameTest(structure = EMPTY, maxTicks = 400)
@@ -432,7 +473,7 @@ public class TreeGameTests {
 	public void aGrownMangroveCutAtTheTrunkKeepsItsRoots(final GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 		BlockPos base = site(8);
-		grow(helper, level, base, TreeFeatures.MANGROVE, Blocks.MUD, Blocks.MANGROVE_LOG, 1, true);
+		grow(helper, level, base, TreeFeatures.MANGROVE, Blocks.MUD, Blocks.MANGROVE_LOG, 1, 1);
 		int rootsBefore = find(level, base, state -> state.is(Blocks.MANGROVE_ROOTS)).size();
 
 		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_AXE);
@@ -450,7 +491,7 @@ public class TreeGameTests {
 	public void aGrownMangroveCutAtARootFallsWholeFromThere(final GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 		BlockPos base = site(9);
-		grow(helper, level, base, TreeFeatures.MANGROVE, Blocks.MUD, Blocks.MANGROVE_LOG, 1, true);
+		grow(helper, level, base, TreeFeatures.MANGROVE, Blocks.MUD, Blocks.MANGROVE_LOG, 1, 1);
 
 		// The root nearest the trunk, so the trunk is in reach.
 		List<BlockPos> roots = find(level, base, state -> state.is(Blocks.MANGROVE_ROOTS));
@@ -465,6 +506,35 @@ public class TreeGameTests {
 				.filter(pos -> pos.getY() >= hit.getY())
 				.count();
 		helper.assertTrue(rootsAtOrAbove == 0, rootsAtOrAbove + " roots left at or above the hit one");
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY, maxTicks = 400)
+	public void aGrownTallMangroveFallsFromItsFarthestRoot(final GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos base = site(10);
+		// Roots as wide as the generator makes them. Six out is the most it
+		// managed in forty seeds, but the way back from the lowest of them
+		// climbs as well, and took more than the old six steps along the roots.
+		grow(helper, level, base, TreeFeatures.TALL_MANGROVE, Blocks.MUD, Blocks.MANGROVE_LOG, 1, 6);
+
+		BlockPos trunk = lowest(find(level, base, state -> state.is(Blocks.MANGROVE_LOG)));
+		// The farthest root out, and of those the lowest: the longest way back.
+		BlockPos hit = find(level, base, state -> state.is(Blocks.MANGROVE_ROOTS)).stream()
+				.max(java.util.Comparator.<BlockPos>comparingInt(pos -> spread(trunk, pos))
+						.thenComparingInt(pos -> -pos.getY()))
+				.orElseThrow();
+
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_AXE);
+		player.gameMode.destroyBlock(hit);
+
+		assertNoneLeft(helper, level, base, state -> state.is(Blocks.MANGROVE_LOG), "mangrove logs");
+		assertNoneLeft(helper, level, base, state -> state.is(Blocks.MANGROVE_LEAVES), "mangrove leaves");
+		long rootsAtOrAbove = find(level, base, state -> state.is(Blocks.MANGROVE_ROOTS)).stream()
+				.filter(pos -> pos.getY() >= hit.getY())
+				.count();
+		helper.assertTrue(rootsAtOrAbove == 0, rootsAtOrAbove + " roots left at or above the hit one, "
+				+ spread(trunk, hit) + " out from the trunk");
 		helper.succeed();
 	}
 
@@ -493,7 +563,7 @@ public class TreeGameTests {
 			final Block soil, final Block log, final Predicate<BlockState> canopy, final int minTrunk) {
 		ServerLevel level = helper.getLevel();
 		BlockPos base = site(index);
-		int height = grow(helper, level, base, feature, soil, log, minTrunk, false);
+		int height = grow(helper, level, base, feature, soil, log, minTrunk, 0);
 
 		List<BlockPos> logs = find(level, base, state -> state.is(log));
 		java.util.Set<BlockPos> joined = joinedCanopy(level, logs, canopy);
@@ -536,18 +606,25 @@ public class TreeGameTests {
 		return new BlockPos(20000 + index * 96, 100, 20000);
 	}
 
-	/** @return the height of the trunk that grew */
+	/**
+	 * @param minRootSpread retries other seeds until some root grew at least
+	 *                      this far out from the trunk; 0 for no roots at all
+	 * @return the height of the trunk that grew
+	 */
 	private static int grow(
 			final GameTestHelper helper, final ServerLevel level, final BlockPos base,
 			final ResourceKey<ConfiguredFeature<?, ?>> key, final Block soil, final Block log,
-			final int minTrunk, final boolean needsRoots) {
+			final int minTrunk, final int minRootSpread) {
 		ConfiguredFeature<?, ?> feature = level.registryAccess()
 				.lookupOrThrow(Registries.CONFIGURED_FEATURE).getValueOrThrow(key);
 
+		int placed = 0;
+		int bestSpread = 0;
 		for (long seed = 0; seed < 40; seed++) {
 			clear(level, base);
-			for (int dx = -4; dx <= 4; dx++) {
-				for (int dz = -4; dz <= 4; dz++) {
+			// Wide enough for a mangrove's roots, which reach up to 8 out.
+			for (int dx = -SOIL; dx <= SOIL; dx++) {
+				for (int dz = -SOIL; dz <= SOIL; dz++) {
 					level.setBlock(base.offset(dx, -1, dz), soil.defaultBlockState(), Block.UPDATE_CLIENTS);
 					// Real ground under the soil: mangrove roots grow down through
 					// mud until something stops them, and give up if nothing does.
@@ -564,16 +641,28 @@ public class TreeGameTests {
 			}
 			int height = logs.stream().mapToInt(BlockPos::getY).max().orElseThrow()
 					- lowest(logs).getY() + 1;
-			boolean rootsOk = !needsRoots || !find(level, base, state -> state.is(Blocks.MANGROVE_ROOTS)).isEmpty();
-			if (height >= minTrunk && rootsOk) {
+			BlockPos trunk = lowest(logs);
+			int rootSpread = find(level, base, state -> state.is(Blocks.MANGROVE_ROOTS)).stream()
+					.mapToInt(pos -> spread(trunk, pos)).max().orElse(0);
+			placed++;
+			bestSpread = Math.max(bestSpread, rootSpread);
+			if (height >= minTrunk && rootSpread >= minRootSpread) {
 				return height;
 			}
 		}
-		helper.fail("could not grow " + key.identifier() + " to " + minTrunk + " blocks");
+		helper.fail("could not grow " + key.identifier() + " to " + minTrunk + " blocks"
+				+ (minRootSpread == 0 ? "" : " with roots " + minRootSpread + " out")
+				+ " (" + placed + " grew, widest roots " + bestSpread + " out)");
 		return 0;
 	}
 
 	private static final int REACH = 14;
+	private static final int SOIL = 10;
+
+	/** How far out from the trunk a root is, horizontally. */
+	private static int spread(final BlockPos trunk, final BlockPos pos) {
+		return Math.max(Math.abs(pos.getX() - trunk.getX()), Math.abs(pos.getZ() - trunk.getZ()));
+	}
 
 	private static void clear(final ServerLevel level, final BlockPos base) {
 		BlockState air = Blocks.AIR.defaultBlockState();

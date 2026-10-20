@@ -210,7 +210,7 @@ public final class BreakHandler {
 			final ServerLevel level, final BlockPos origin, final TreeGroup group,
 			final Set<Role> roles, final BulkMineConfig.Server config) {
 		TreeFeller.RootSearch search = TreeFeller.searchRoots(
-				level, origin, group, config.rootDistance, config.maxRoots);
+				level, origin, group, config.rootRadius, config.maxRoots);
 		// Felling takes logs, which needs the same axe role as cutting a log.
 		if (search.firstLog() == null || !roles.contains(Role.AXE)) {
 			return search.roots();

@@ -63,10 +63,10 @@ public final class ConfigWriter {
     // Set false to treat every leaf alike.
     "distinguishPlacedLeaves": ${distinguishPlacedLeaves},
 
-    // How far roots are followed from a root that was hit, in blocks. If a
-    // log of the same tree is reached, the whole tree is felled instead,
-    // down to the height of that root.
-    "rootDistance": ${rootDistance},
+    // How far out roots are followed from a root that was hit, in blocks,
+    // horizontally only. If a log of the same tree is reached, the whole tree
+    // is felled instead, down to the height of that root.
+    "rootRadius": ${rootRadius},
 
     // Safety caps for tree felling. treeRadius is horizontal only.
     "maxLogs": ${maxLogs},
@@ -159,7 +159,7 @@ public final class ConfigWriter {
 		values.put("breakLeaves", s.breakLeaves);
 		values.put("leafDistance", s.leafDistance);
 		values.put("distinguishPlacedLeaves", s.distinguishPlacedLeaves);
-		values.put("rootDistance", s.rootDistance);
+		values.put("rootRadius", s.rootRadius);
 		values.put("maxLogs", s.maxLogs);
 		values.put("maxLeaves", s.maxLeaves);
 		values.put("maxRoots", s.maxRoots);

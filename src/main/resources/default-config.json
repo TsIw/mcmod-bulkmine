@@ -35,10 +35,10 @@
     // Set false to treat every leaf alike.
     "distinguishPlacedLeaves": true,
 
-    // How far roots are followed from a root that was hit, in blocks. If a
-    // log of the same tree is reached, the whole tree is felled instead,
-    // down to the height of that root.
-    "rootDistance": 6,
+    // How far out roots are followed from a root that was hit, in blocks,
+    // horizontally only. If a log of the same tree is reached, the whole tree
+    // is felled instead, down to the height of that root.
+    "rootRadius": 10,
 
     // Safety caps for tree felling. treeRadius is horizontal only.
     "maxLogs": 256,

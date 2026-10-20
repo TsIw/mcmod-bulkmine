@@ -146,43 +146,48 @@ public final class TreeFeller {
 
 	/**
 	 * Follows roots outward from the one that was hit, at or above its height
-	 * and up to {@code distance} steps away, watching for the tree's trunk.
-	 * Stops as soon as the trunk turns up, since the caller fells the tree
-	 * from there instead.
+	 * and up to {@code radius} blocks away horizontally, watching for the
+	 * tree's trunk. Stops as soon as the trunk turns up, since the caller
+	 * fells the tree from there instead.
+	 *
+	 * <p>The radius is horizontal only, the same as for logs. It used to be a
+	 * count of steps along the roots, and the way back from the low end of a
+	 * tall mangrove's root climbs as much as it goes in, so six steps fell
+	 * short of trunks that were only six blocks away. Height needs no limit:
+	 * the hit root is the floor, and grown roots never reach above their
+	 * trunk's base.
 	 */
 	public static RootSearch searchRoots(
-			final Level level, final BlockPos origin, final TreeGroup group, final int distance, final int maxRoots) {
+			final Level level, final BlockPos origin, final TreeGroup group, final int radius, final int maxRoots) {
 		List<BlockPos> found = new ArrayList<>();
 		Set<BlockPos> seen = new HashSet<>();
-		Deque<BlockPos> frontier = new ArrayDeque<>();
+		Deque<BlockPos> queue = new ArrayDeque<>();
 		seen.add(origin.immutable());
-		frontier.add(origin.immutable());
+		queue.add(origin.immutable());
 
-		for (int step = 0; step < distance && !frontier.isEmpty(); step++) {
-			Deque<BlockPos> next = new ArrayDeque<>();
+		// Breadth first, so the trunk found is the nearest one along the roots.
+		while (!queue.isEmpty()) {
+			BlockPos current = queue.poll();
 
-			while (!frontier.isEmpty()) {
-				BlockPos current = frontier.poll();
-
-				for (BlockPos neighbour : neighbours(current)) {
-					if (neighbour.getY() < origin.getY() || !seen.add(neighbour)) {
-						continue;
-					}
-
-					BlockState state = level.getBlockState(neighbour);
-					if (group.isLog(state)) {
-						return new RootSearch(found, neighbour);
-					}
-					if (!group.isRoot(state) || found.size() >= maxRoots) {
-						continue;
-					}
-
-					found.add(neighbour);
-					next.add(neighbour);
+			for (BlockPos neighbour : neighbours(current)) {
+				if (neighbour.getY() < origin.getY() || !seen.add(neighbour)) {
+					continue;
 				}
-			}
+				if (horizontal(origin, neighbour) > radius) {
+					continue;
+				}
 
-			frontier = next;
+				BlockState state = level.getBlockState(neighbour);
+				if (group.isLog(state)) {
+					return new RootSearch(found, neighbour);
+				}
+				if (!group.isRoot(state) || found.size() >= maxRoots) {
+					continue;
+				}
+
+				found.add(neighbour);
+				queue.add(neighbour);
+			}
 		}
 
 		return new RootSearch(found, null);
