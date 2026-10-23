@@ -10,13 +10,15 @@ A bulk-breaking mod that digs stone and dirt in bulk and fells whole trees.
 - **Only what you meant**: blocks that would not drop anything (diamond ore with a stone pickaxe, for example) are left in place. Neighbouring trees of another kind and leaves you placed as decoration are never caught up.
 - **No new items or recipes**: it only extends how your existing tools behave.
 
-### Features
+---
 
-**Cube mining**
+### ✨ Features
+
+#### ⛏️ Cube mining
 
 With a pickaxe or shovel, mines a cube centred on the block you hit (3×3×2 by default), leaving out the layers below that block. Turn on `cubeBelow` to take the whole cube (3×3×3).
 
-**Tree felling**
+#### 🪓 Tree felling
 
 Hit a log with an axe to fell that tree's logs and leaves together.
 
@@ -25,32 +27,40 @@ Hit a log with an axe to fell that tree's logs and leaves together.
 - Giant spruce and giant jungle trees around 30 blocks tall come down from the base.
 - Nothing below the block you hit is cut. Turn on `treeBelow` to take the stump and roots too.
 
-**Leaf clearing**
+#### 🍃 Leaf clearing
 
 Hit leaves with a hoe or shears to clear the connected leaves of the same tree. Nothing below the block you hit is cleared.
 
-**Mangrove roots**
+#### 🌿 Mangrove roots
 
 Hit a root with an axe: if it connects to the trunk, the whole tree comes down; otherwise just the roots are cleared.
 
-**Other mods**
+#### 🧩 Other mod support
 
 Tools and blocks from other mods can be added with a command.
 
-### Installation
+---
+
+### 📦 Installation
 
 - Requires Fabric Loader and **Fabric API**.
 - **On a multiplayer server, the server needs it too.** With the mod on the client only, the readout shows "Unsupported" and nothing happens. In single player there is nothing to worry about.
 
-### Configuration
+---
+
+### ⚙️ Configuration
 
 `config/bulkmine.json` controls the size steps, durability cost, felling range, target blocks and more. Operators can add or remove tools and target blocks with `/bulkmine` commands.
 
-### Commands
+---
+
+### 💬 Commands
 
 BulkMine's settings can be changed with commands.
 
-**Everyone** (works in single player even with cheats off)
+#### 👤 Everyone
+
+Works in single player even with cheats off.
 
 | Command | Description |
 |---|---|
@@ -59,7 +69,9 @@ BulkMine's settings can be changed with commands.
 | `/bulkmine config cubeBelow <on/off>` | Also dig the layers below the cursor (off by default) |
 | `/bulkmine config treeBelow <on/off>` | Also fell and clear below the block you hit (off by default) |
 
-**Operators** (always in single player; permission level 2 or higher on a server)
+#### 🛡️ Operators
+
+Always in single player; permission level 2 or higher on a server.
 
 | Command | Description |
 |---|---|
@@ -80,7 +92,7 @@ BulkMine's settings can be changed with commands.
 
 ---
 
-## BulkMine
+## BulkMine（日本語）
 
 石や土をまとめて掘り、木を丸ごと伐採する一括破壊Modです。
 
@@ -90,13 +102,15 @@ BulkMine's settings can be changed with commands.
 - **余計なものを壊さない**：ドロップが出ないブロック（石のつるはしでダイヤ鉱石など）は掘らずに残します。隣の別の木や、プレイヤーが設置した葉の飾りも巻き込みません。
 - **追加アイテム・レシピなし**：既存のツールの挙動を拡張するだけです。
 
-### 機能
+---
 
-**立方範囲の採掘**
+### ✨ 機能
+
+#### ⛏️ 立方範囲の採掘
 
 叩いたブロックより下の層を除き、つるはし・シャベルで、カーソルを中心とした立方範囲（既定 3×3×2）をまとめて掘ります。`cubeBelow` をONにすると下の層も含めて掘ります（3×3×3）。
 
-**木の一括伐採**
+#### 🪓 木の一括伐採
 
 斧で原木を叩くと、その木の原木と葉をまとめて伐採します。
 
@@ -105,32 +119,40 @@ BulkMine's settings can be changed with commands.
 - 高さ30前後の巨大トウヒや巨大ジャングルも根元から倒れます。
 - 叩いた高さより下は残します。`treeBelow` をONにすると切り株や根も刈ります。
 
-**葉の一括刈り**
+#### 🍃 葉の一括刈り
 
 クワやハサミで葉を叩くと、つながった同じ木の葉をまとめて刈ります。叩いた高さより下は刈りません。
 
-**マングローブの根**
+#### 🌿 マングローブの根
 
 斧で根を叩くと、幹までつながっていれば木全体を、つながっていなければ根だけを刈ります。
 
-**他Modへの対応**
+#### 🧩 他Modへの対応
 
 他Modのツールやブロックも、コマンドで登録すれば対象にできます。
 
-### 導入
+---
+
+### 📦 導入
 
 - Fabric Loader と **Fabric API が必要**です。
 - **マルチプレイではサーバーにも導入が必要です。** クライアントだけに入れた場合、画面に「非対応」と表示され、機能は動きません。シングルプレイでは気にする必要はありません。
 
-### 設定
+---
+
+### ⚙️ 設定
 
 `config/bulkmine.json` で、立方サイズの段階、耐久の消費率、伐採の範囲、対象ブロックなどを変更できます。管理者は `/bulkmine` コマンドからツールや対象ブロックを追加・除外できます。
 
-### コマンド
+---
+
+### 💬 コマンド
 
 BulkMineの設定はコマンドから変更することができます。
 
-**全プレイヤー**（シングルプレイではチート無効のままでも使えます）
+#### 👤 全プレイヤー
+
+シングルプレイではチート無効のままでも使えます。
 
 | コマンド | 内容 |
 |---|---|
@@ -139,7 +161,9 @@ BulkMineの設定はコマンドから変更することができます。
 | `/bulkmine config cubeBelow <on/off>` | 立方範囲でカーソルより下の層も掘る（既定 off） |
 | `/bulkmine config treeBelow <on/off>` | 伐採・葉・根で叩いた位置より下も刈る（既定 off） |
 
-**管理用**（シングルプレイでは常に、サーバーでは権限レベル2以上）
+#### 🛡️ 管理用
+
+シングルプレイでは常に、サーバーでは権限レベル2以上で使えます。
 
 | コマンド | 内容 |
 |---|---|
