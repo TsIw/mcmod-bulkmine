@@ -60,12 +60,123 @@ public class BulkMineGameTests {
 	}
 
 	@GameTest(structure = EMPTY)
+	public void cubeBelowTakesTheWholeCube(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_PICKAXE);
+		PlayerSettings.setCubeBelow(player, true);
+		BlockPos origin = new BlockPos(3, 3, 3);
+		fill(helper, origin, 1, Blocks.STONE);
+		helper.setBlock(origin.offset(0, -2, 0), Blocks.STONE);
+
+		mine(helper, player, origin);
+
+		// All three layers go, the one under the cursor included...
+		for (int dy = -1; dy <= 1; dy++) {
+			int y = dy;
+			forEachOffset(1, (dx, dz) -> helper.assertBlockNotPresent(Blocks.STONE, origin.offset(dx, y, dz)));
+		}
+		// ...and nothing past the cube.
+		helper.assertBlockPresent(Blocks.STONE, origin.offset(0, -2, 0));
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void cubeBelowAtSizeFiveTakesFiveLayers(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_PICKAXE);
+		PlayerSettings.setCubeSize(player, 5);
+		PlayerSettings.setCubeBelow(player, true);
+		BlockPos origin = new BlockPos(4, 4, 4);
+		fill(helper, origin, 2, Blocks.STONE);
+		helper.setBlock(origin.offset(0, -3, 0), Blocks.STONE);
+
+		mine(helper, player, origin);
+
+		for (int dy = -2; dy <= 2; dy++) {
+			int y = dy;
+			forEachOffset(2, (dx, dz) -> helper.assertBlockNotPresent(Blocks.STONE, origin.offset(dx, y, dz)));
+		}
+		helper.assertBlockPresent(Blocks.STONE, origin.offset(0, -3, 0));
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void cubeBelowStillLeavesLogs(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.NETHERITE_PICKAXE);
+		registerTool(Items.NETHERITE_PICKAXE, Role.ALL);
+		PlayerSettings.setCubeBelow(player, true);
+		BlockPos origin = new BlockPos(3, 3, 3);
+		fill(helper, origin, 1, Blocks.STONE);
+
+		BlockPos log = origin.offset(1, -1, 1);
+		helper.setBlock(log, Blocks.OAK_LOG);
+
+		mine(helper, player, origin);
+
+		helper.assertBlockNotPresent(Blocks.STONE, origin.offset(-1, -1, -1));
+		helper.assertBlockPresent(Blocks.OAK_LOG, log);
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void cubeBelowStillSkipsWhatTheToolCannotHarvest(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.WOODEN_PICKAXE);
+		PlayerSettings.setCubeBelow(player, true);
+		BlockPos origin = new BlockPos(3, 3, 3);
+		fill(helper, origin, 1, Blocks.STONE);
+
+		BlockPos ore = origin.offset(0, -1, 0);
+		helper.setBlock(ore, Blocks.IRON_ORE);
+
+		mine(helper, player, origin);
+
+		helper.assertBlockNotPresent(Blocks.STONE, origin.offset(1, -1, 0));
+		helper.assertBlockPresent(Blocks.IRON_ORE, ore);
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void commandsTurnTheBelowSettingsOnAndOff(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_PICKAXE);
+		net.minecraft.commands.Commands commands = helper.getLevel().getServer().getCommands();
+
+		commands.performPrefixedCommand(player.createCommandSourceStack(), "bulkmine config cubeBelow on");
+		helper.assertTrue(PlayerSettings.cubeBelow(player), "cubeBelow on did not take");
+		helper.assertTrue(!PlayerSettings.treeBelow(player), "cubeBelow on also changed treeBelow");
+
+		commands.performPrefixedCommand(player.createCommandSourceStack(), "bulkmine config treeBelow on");
+		helper.assertTrue(PlayerSettings.treeBelow(player), "treeBelow on did not take");
+
+		commands.performPrefixedCommand(player.createCommandSourceStack(), "bulkmine config cubeBelow off");
+		helper.assertTrue(!PlayerSettings.cubeBelow(player), "cubeBelow off did not take");
+		helper.assertTrue(PlayerSettings.treeBelow(player), "cubeBelow off also changed treeBelow");
+
+		commands.performPrefixedCommand(player.createCommandSourceStack(), "bulkmine config treeBelow off");
+		helper.assertTrue(!PlayerSettings.treeBelow(player), "treeBelow off did not take");
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void treeBelowLeavesTheCubeAsItWas(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_PICKAXE);
+		PlayerSettings.setTreeBelow(player, true);
+		BlockPos origin = new BlockPos(3, 3, 3);
+		fill(helper, origin, 1, Blocks.STONE);
+
+		mine(helper, player, origin);
+
+		forEachOffset(1, (dx, dz) -> helper.assertBlockPresent(Blocks.STONE, origin.offset(dx, -1, dz)));
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
 	public void cubeShapeIsEighteenPositions(final GameTestHelper helper) {
-		List<BlockPos> positions = CubeMiner.collect(BlockPos.ZERO, 3);
+		List<BlockPos> positions = CubeMiner.collect(BlockPos.ZERO, 3, false);
 		// 3x3x2 minus the origin, which vanilla already broke.
 		helper.assertTrue(positions.size() == 17, "expected 17 extra positions, got " + positions.size());
 		helper.assertTrue(positions.stream().noneMatch(pos -> pos.getY() < 0), "cube reached below the cursor");
-		helper.assertTrue(CubeMiner.collect(BlockPos.ZERO, 5).size() == 74, "5x5x3 should be 74 extra positions");
+		helper.assertTrue(CubeMiner.collect(BlockPos.ZERO, 5, false).size() == 74, "5x5x3 should be 74 extra positions");
+		// With the layers below: the whole cube, still minus the origin.
+		helper.assertTrue(CubeMiner.collect(BlockPos.ZERO, 3, true).size() == 26, "3x3x3 should be 26 extra positions");
+		helper.assertTrue(CubeMiner.collect(BlockPos.ZERO, 5, true).size() == 124, "5x5x5 should be 124 extra positions");
 		helper.succeed();
 	}
 
@@ -452,6 +563,22 @@ public class BulkMineGameTests {
 		// The first player's size was untouched by the second player's change.
 		helper.assertTrue(PlayerSettings.cubeSize(small) == 1,
 				"expected size 1, got " + PlayerSettings.cubeSize(small));
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void belowSettingsStartOffAndArePerPlayer(final GameTestHelper helper) {
+		ServerPlayer first = preparePlayer(helper, Items.DIAMOND_PICKAXE);
+		ServerPlayer second = helper.makeMockServerPlayerInLevel();
+		helper.assertTrue(!PlayerSettings.cubeBelow(first) && !PlayerSettings.treeBelow(first),
+				"both should start off");
+
+		PlayerSettings.setCubeBelow(first, true);
+		PlayerSettings.setTreeBelow(first, true);
+
+		helper.assertTrue(PlayerSettings.cubeBelow(first) && PlayerSettings.treeBelow(first), "first turned both on");
+		helper.assertTrue(!PlayerSettings.cubeBelow(second) && !PlayerSettings.treeBelow(second),
+				"second should be untouched");
 		helper.succeed();
 	}
 

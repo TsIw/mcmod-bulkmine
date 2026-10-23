@@ -1,19 +1,3 @@
-# CurseForge 掲載用テキスト
-
-CurseForge のプロジェクト作成画面に貼り付けるための原稿です。本文は日本語・英語の順に並べて、1ページに両方載せる想定です。
-
----
-
-## 短い説明（Summary）
-
-木・石・土をまとめて破壊する一括破壊Mod
-
-英語: A bulk-breaking mod that takes down trees, stone and dirt in one go.
-
----
-
-## 本文
-
 ## BulkMine
 
 ※日本語の説明はページ下部にあります。
@@ -30,7 +14,7 @@ A bulk-breaking mod that digs stone and dirt in bulk and fells whole trees.
 
 **Cube mining**
 
-With a pickaxe or shovel, mines a cube centred on the block you hit (3×3×2 by default), leaving out the layers below that block.
+With a pickaxe or shovel, mines a cube centred on the block you hit (3×3×2 by default), leaving out the layers below that block. Turn on `cubeBelow` to take the whole cube (3×3×3).
 
 **Tree felling**
 
@@ -39,7 +23,7 @@ Hit a log with an axe to fell that tree's logs and leaves together.
 - Works on every vanilla tree, huge red and brown mushrooms, and crimson and warped huge fungi.
 - Trees are told apart by kind: cutting an oak leaves the birch next to it intact.
 - Giant spruce and giant jungle trees around 30 blocks tall come down from the base.
-- Nothing below the block you hit is cut.
+- Nothing below the block you hit is cut. Turn on `treeBelow` to take the stump and roots too.
 
 **Leaf clearing**
 
@@ -72,6 +56,8 @@ BulkMine's settings can be changed with commands.
 |---|---|
 | `/bulkmine config` | Show your own settings and the server settings |
 | `/bulkmine config size <1-15>` | Change your cube size (odd numbers only) |
+| `/bulkmine config cubeBelow <on/off>` | Also dig the layers below the cursor (off by default) |
+| `/bulkmine config treeBelow <on/off>` | Also fell and clear below the block you hit (off by default) |
 
 **Operators** (always in single player; permission level 2 or higher on a server)
 
@@ -108,7 +94,7 @@ BulkMine's settings can be changed with commands.
 
 **立方範囲の採掘**
 
-叩いたブロックより下の層を除き、つるはし・シャベルで、カーソルを中心とした立方範囲（既定 3×3×2）をまとめて掘ります。
+叩いたブロックより下の層を除き、つるはし・シャベルで、カーソルを中心とした立方範囲（既定 3×3×2）をまとめて掘ります。`cubeBelow` をONにすると下の層も含めて掘ります（3×3×3）。
 
 **木の一括伐採**
 
@@ -117,7 +103,7 @@ BulkMine's settings can be changed with commands.
 - バニラの木すべてと、巨大キノコ（赤・茶）、ネザーの巨大キノコ（真紅・歪んだ）に対応しています。
 - 木は種類ごとに区別されます。オークを切っても隣のシラカバは削れません。
 - 高さ30前後の巨大トウヒや巨大ジャングルも根元から倒れます。
-- 叩いた高さより下は残します。
+- 叩いた高さより下は残します。`treeBelow` をONにすると切り株や根も刈ります。
 
 **葉の一括刈り**
 
@@ -150,6 +136,8 @@ BulkMineの設定はコマンドから変更することができます。
 |---|---|
 | `/bulkmine config` | 自分の設定とサーバー設定を表示 |
 | `/bulkmine config size <1-15>` | 自分の立方サイズを変更（奇数のみ） |
+| `/bulkmine config cubeBelow <on/off>` | 立方範囲でカーソルより下の層も掘る（既定 off） |
+| `/bulkmine config treeBelow <on/off>` | 伐採・葉・根で叩いた位置より下も刈る（既定 off） |
 
 **管理用**（シングルプレイでは常に、サーバーでは権限レベル2以上）
 

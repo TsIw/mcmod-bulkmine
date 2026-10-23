@@ -7,6 +7,7 @@ import static io.github.tsiw.bulkmine.test.BulkMineGameTests.preparePlayer;
 import io.github.tsiw.bulkmine.config.BulkMineConfig;
 import io.github.tsiw.bulkmine.config.ConfigManager;
 import io.github.tsiw.bulkmine.registry.BlockWhitelist;
+import io.github.tsiw.bulkmine.state.PlayerSettings;
 import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.List;
@@ -370,6 +371,143 @@ public class TreeGameTests {
 		helper.succeed();
 	}
 
+	// ---------------------------------------------------------- going below
+
+	@GameTest(structure = EMPTY)
+	public void treeBelowTakesTheStumpAndTheRoots(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_AXE);
+		PlayerSettings.setTreeBelow(player, true);
+
+		helper.setBlock(new BlockPos(2, 1, 2), Blocks.MANGROVE_ROOTS);
+		helper.setBlock(new BlockPos(3, 1, 2), Blocks.MANGROVE_ROOTS);
+		for (int y = 2; y <= 6; y++) {
+			helper.setBlock(new BlockPos(2, y, 2), Blocks.MANGROVE_LOG);
+		}
+		helper.setBlock(new BlockPos(3, 6, 2), Blocks.MANGROVE_LEAVES);
+
+		// Halfway up the trunk.
+		mine(helper, player, new BlockPos(2, 4, 2));
+
+		for (int y = 2; y <= 6; y++) {
+			helper.assertBlockNotPresent(Blocks.MANGROVE_LOG, new BlockPos(2, y, 2));
+		}
+		helper.assertBlockNotPresent(Blocks.MANGROVE_LEAVES, new BlockPos(3, 6, 2));
+		helper.assertBlockNotPresent(Blocks.MANGROVE_ROOTS, new BlockPos(2, 1, 2));
+		helper.assertBlockNotPresent(Blocks.MANGROVE_ROOTS, new BlockPos(3, 1, 2));
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void treeBelowFromARootTakesTheRootsUnderIt(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_AXE);
+		PlayerSettings.setTreeBelow(player, true);
+
+		helper.setBlock(new BlockPos(2, 0, 2), Blocks.MANGROVE_ROOTS);
+		helper.setBlock(new BlockPos(2, 1, 2), Blocks.MANGROVE_ROOTS);
+		helper.setBlock(new BlockPos(2, 2, 2), Blocks.MANGROVE_ROOTS);
+		for (int y = 3; y <= 5; y++) {
+			helper.setBlock(new BlockPos(2, y, 2), Blocks.MANGROVE_LOG);
+		}
+
+		mine(helper, player, new BlockPos(2, 1, 2));
+
+		helper.assertBlockNotPresent(Blocks.MANGROVE_LOG, new BlockPos(2, 5, 2));
+		helper.assertBlockNotPresent(Blocks.MANGROVE_ROOTS, new BlockPos(2, 2, 2));
+		// With the setting off, this one stays as the floor.
+		helper.assertBlockNotPresent(Blocks.MANGROVE_ROOTS, new BlockPos(2, 0, 2));
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void treeBelowClearsLeavesUnderTheHitOne(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_HOE);
+		PlayerSettings.setTreeBelow(player, true);
+
+		helper.setBlock(new BlockPos(2, 2, 2), Blocks.OAK_LEAVES);
+		helper.setBlock(new BlockPos(2, 1, 2), Blocks.OAK_LEAVES);
+		helper.setBlock(new BlockPos(2, 3, 2), Blocks.OAK_LEAVES);
+
+		mine(helper, player, new BlockPos(2, 2, 2));
+
+		helper.assertBlockNotPresent(Blocks.OAK_LEAVES, new BlockPos(2, 1, 2));
+		helper.assertBlockNotPresent(Blocks.OAK_LEAVES, new BlockPos(2, 3, 2));
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void treeBelowStillLeavesAnotherKindsLogs(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_AXE);
+		PlayerSettings.setTreeBelow(player, true);
+		config().breakLeaves = false;
+
+		helper.setBlock(new BlockPos(2, 1, 2), Blocks.BIRCH_LOG);
+		helper.setBlock(new BlockPos(3, 1, 2), Blocks.OAK_LOG);
+		for (int y = 2; y <= 5; y++) {
+			helper.setBlock(new BlockPos(2, y, 2), Blocks.OAK_LOG);
+		}
+
+		mine(helper, player, new BlockPos(2, 4, 2));
+
+		helper.assertBlockNotPresent(Blocks.OAK_LOG, new BlockPos(2, 2, 2));
+		helper.assertBlockNotPresent(Blocks.OAK_LOG, new BlockPos(3, 1, 2));
+		helper.assertBlockPresent(Blocks.BIRCH_LOG, new BlockPos(2, 1, 2));
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void treeBelowStillKeepsPlacedLeaves(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_HOE);
+		PlayerSettings.setTreeBelow(player, true);
+
+		helper.setBlock(new BlockPos(2, 3, 2), Blocks.OAK_LEAVES);
+		helper.setBlock(new BlockPos(2, 2, 2), Blocks.OAK_LEAVES);
+		helper.setBlock(new BlockPos(2, 1, 2), placed(Blocks.OAK_LEAVES));
+
+		mine(helper, player, new BlockPos(2, 3, 2));
+
+		helper.assertBlockNotPresent(Blocks.OAK_LEAVES, new BlockPos(2, 2, 2));
+		helper.assertBlockPresent(Blocks.OAK_LEAVES, new BlockPos(2, 1, 2));
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void treeBelowRootsWithNoTrunkClearDownwardWithinTheRadius(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_AXE);
+		PlayerSettings.setTreeBelow(player, true);
+
+		// A root running down and out, as one does from a mangrove trunk.
+		for (int x = 1; x <= 13; x++) {
+			helper.setBlock(new BlockPos(x, Math.max(1, 14 - x), 2), Blocks.MANGROVE_ROOTS);
+		}
+
+		mine(helper, player, new BlockPos(1, 13, 2));
+
+		for (int x = 2; x <= 11; x++) {
+			helper.assertBlockNotPresent(Blocks.MANGROVE_ROOTS, new BlockPos(x, Math.max(1, 14 - x), 2));
+		}
+		// Still bounded by rootRadius sideways.
+		helper.assertBlockPresent(Blocks.MANGROVE_ROOTS, new BlockPos(12, 2, 2));
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY)
+	public void cubeBelowLeavesFellingAsItWas(final GameTestHelper helper) {
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_AXE);
+		PlayerSettings.setCubeBelow(player, true);
+		config().breakLeaves = false;
+
+		for (int y = 1; y <= 5; y++) {
+			helper.setBlock(new BlockPos(2, y, 2), Blocks.OAK_LOG);
+		}
+
+		mine(helper, player, new BlockPos(2, 3, 2));
+
+		helper.assertBlockNotPresent(Blocks.OAK_LOG, new BlockPos(2, 5, 2));
+		helper.assertBlockPresent(Blocks.OAK_LOG, new BlockPos(2, 2, 2));
+		helper.assertBlockPresent(Blocks.OAK_LOG, new BlockPos(2, 1, 2));
+		helper.succeed();
+	}
+
 	// ----------------------------------------------------------- migration
 
 	@GameTest(structure = EMPTY)
@@ -535,6 +673,44 @@ public class TreeGameTests {
 				.count();
 		helper.assertTrue(rootsAtOrAbove == 0, rootsAtOrAbove + " roots left at or above the hit one, "
 				+ spread(trunk, hit) + " out from the trunk");
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY, maxTicks = 400)
+	public void aGrownMangroveCutWithTreeBelowLeavesNothing(final GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos base = site(11);
+		grow(helper, level, base, TreeFeatures.TALL_MANGROVE, Blocks.MUD, Blocks.MANGROVE_LOG, 1, 1);
+
+		List<BlockPos> logs = find(level, base, state -> state.is(Blocks.MANGROVE_LOG));
+		BlockPos lowest = lowest(logs);
+		// Partway up the trunk, so the stump below the cut has to go as well.
+		BlockPos hit = lowest.above(2);
+
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_AXE);
+		PlayerSettings.setTreeBelow(player, true);
+		player.gameMode.destroyBlock(hit);
+
+		assertNoneLeft(helper, level, base, state -> state.is(Blocks.MANGROVE_LOG), "mangrove logs");
+		assertNoneLeft(helper, level, base, state -> state.is(Blocks.MANGROVE_LEAVES), "mangrove leaves");
+		assertNoneLeft(helper, level, base, state -> state.is(Blocks.MANGROVE_ROOTS), "mangrove roots");
+		helper.succeed();
+	}
+
+	@GameTest(structure = EMPTY, maxTicks = 400)
+	public void aGrownGiantSpruceCutHalfwayWithTreeBelowFallsWhole(final GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos base = site(12);
+		int height = grow(helper, level, base, TreeFeatures.MEGA_SPRUCE, Blocks.PODZOL, Blocks.SPRUCE_LOG, 20, 0);
+
+		BlockPos hit = lowest(find(level, base, state -> state.is(Blocks.SPRUCE_LOG))).above(height / 2);
+
+		ServerPlayer player = preparePlayer(helper, Items.DIAMOND_AXE);
+		PlayerSettings.setTreeBelow(player, true);
+		player.gameMode.destroyBlock(hit);
+
+		assertNoneLeft(helper, level, base, state -> state.is(Blocks.SPRUCE_LOG),
+				"logs of a " + height + "-high trunk cut at " + (height / 2));
 		helper.succeed();
 	}
 

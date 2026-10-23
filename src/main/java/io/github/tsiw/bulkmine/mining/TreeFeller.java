@@ -18,15 +18,16 @@ import net.minecraft.world.level.block.state.BlockState;
  * Flood fills a tree outward from the block that was just broken.
  *
  * <p>Every search follows one tree's own blocks only, and every search but the
- * canopy around felled logs has a floor it never goes below: cutting a trunk
- * halfway leaves the stump, and logs buried underground are never reached.
+ * canopy around felled logs has a floor it never goes below, unless the player
+ * asked to go below: cutting a trunk halfway leaves the stump, and logs buried
+ * underground are never reached.
  * Each also stops at a block count, and logs and roots at a horizontal radius.
  */
 public final class TreeFeller {
 	private TreeFeller() {
 	}
 
-	/** For {@link #collectLeaves}: no floor at all. */
+	/** A floor that is never reached: the search goes as far down as it likes. */
 	public static final int NO_FLOOR = Integer.MIN_VALUE;
 
 	/**
@@ -137,7 +138,7 @@ public final class TreeFeller {
 	/**
 	 * What a search from a hit root found.
 	 *
-	 * @param roots    the roots within reach, at or above the hit one
+	 * @param roots    the roots within reach, at or above the floor
 	 * @param firstLog the nearest of the group's logs those roots led to, or
 	 *                 null when they led to none
 	 */
@@ -145,20 +146,20 @@ public final class TreeFeller {
 	}
 
 	/**
-	 * Follows roots outward from the one that was hit, at or above its height
-	 * and up to {@code radius} blocks away horizontally, watching for the
-	 * tree's trunk. Stops as soon as the trunk turns up, since the caller
-	 * fells the tree from there instead.
+	 * Follows roots outward from the one that was hit, at or above
+	 * {@code floorY} and up to {@code radius} blocks away horizontally,
+	 * watching for the tree's trunk. Stops as soon as the trunk turns up,
+	 * since the caller fells the tree from there instead.
 	 *
 	 * <p>The radius is horizontal only, the same as for logs. It used to be a
 	 * count of steps along the roots, and the way back from the low end of a
 	 * tall mangrove's root climbs as much as it goes in, so six steps fell
-	 * short of trunks that were only six blocks away. Height needs no limit:
-	 * the hit root is the floor, and grown roots never reach above their
-	 * trunk's base.
+	 * short of trunks that were only six blocks away. Height needs no limit
+	 * upward: grown roots never reach above their trunk's base.
 	 */
 	public static RootSearch searchRoots(
-			final Level level, final BlockPos origin, final TreeGroup group, final int radius, final int maxRoots) {
+			final Level level, final BlockPos origin, final TreeGroup group, final int floorY,
+			final int radius, final int maxRoots) {
 		List<BlockPos> found = new ArrayList<>();
 		Set<BlockPos> seen = new HashSet<>();
 		Deque<BlockPos> queue = new ArrayDeque<>();
@@ -170,7 +171,7 @@ public final class TreeFeller {
 			BlockPos current = queue.poll();
 
 			for (BlockPos neighbour : neighbours(current)) {
-				if (neighbour.getY() < origin.getY() || !seen.add(neighbour)) {
+				if (neighbour.getY() < floorY || !seen.add(neighbour)) {
 					continue;
 				}
 				if (horizontal(origin, neighbour) > radius) {

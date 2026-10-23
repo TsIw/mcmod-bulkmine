@@ -14,6 +14,10 @@
 	"bulkmine.command.config.header": "Your settings:",
 	"bulkmine.command.config.server": "Server settings:",
 	"bulkmine.command.size.set": "Cube size set to %s",
+	"bulkmine.command.cube_below.on": "The cube now digs the layers below the cursor too",
+	"bulkmine.command.cube_below.off": "The cube no longer digs below the cursor",
+	"bulkmine.command.tree_below.on": "Felling and clearing now go below the block you hit",
+	"bulkmine.command.tree_below.off": "Felling and clearing leave what is below the block you hit",
 
 	"bulkmine.command.tool.added": "Registered %s as %s",
 	"bulkmine.command.tool.removed": "Removed %s",

@@ -80,8 +80,9 @@ public final class BreakHandler {
 		// May be empty: hoes and shears hold no role, yet clear leaves.
 		Set<Role> roles = ToolRegistry.rolesOf(tool);
 
-		List<BlockPos> targets = selectTargets(
-				serverLevel, pos, state, roles, config, PlayerSettings.cubeSize(serverPlayer), tool);
+		Reach reach = new Reach(PlayerSettings.cubeSize(serverPlayer),
+				PlayerSettings.cubeBelow(serverPlayer), PlayerSettings.treeBelow(serverPlayer));
+		List<BlockPos> targets = selectTargets(serverLevel, pos, state, roles, config, reach, tool);
 		if (targets.isEmpty()) {
 			return;
 		}
@@ -95,6 +96,17 @@ public final class BreakHandler {
 	}
 
 	/**
+	 * How far one player's swing goes: their cube size, and whether the cube
+	 * and the tree searches take what lies below the block that was hit.
+	 */
+	private record Reach(int cubeSize, boolean cubeBelow, boolean treeBelow) {
+		/** The lowest height a tree search may touch, starting from this block. */
+		int treeFloor(final BlockPos origin) {
+			return treeBelow ? TreeFeller.NO_FLOOR : origin.getY();
+		}
+	}
+
+	/**
 	 * Picks what one swing breaks, by what was hit: a log fells its tree, a
 	 * root clears roots or fells the tree they lead to, a leaf clears leaves,
 	 * and anything else on a cube list digs a cube. Trees are checked first,
@@ -102,7 +114,7 @@ public final class BreakHandler {
 	 */
 	private static List<BlockPos> selectTargets(
 			final ServerLevel level, final BlockPos origin, final BlockState state,
-			final Set<Role> roles, final BulkMineConfig.Server config, final int cubeSize,
+			final Set<Role> roles, final BulkMineConfig.Server config, final Reach reach,
 			final ItemStack tool) {
 		// A block the tool cannot harvest drops nothing, so breaking it in bulk
 		// would only destroy it -- a stone pickaxe would clear a vein of diamond
@@ -122,17 +134,17 @@ public final class BreakHandler {
 			if (!roles.contains(Role.AXE)) {
 				return List.of();
 			}
-			targets = fell(level, origin, logGroup, config);
+			targets = fell(level, origin, logGroup, config, reach);
 		} else if (rootGroup != null) {
 			if (!suits(tool, state)) {
 				return List.of();
 			}
-			targets = fromRoot(level, origin, rootGroup, roles, config);
+			targets = fromRoot(level, origin, rootGroup, roles, config, reach);
 		} else if (!leafGroups.isEmpty()) {
 			if (!suits(tool, state)) {
 				return List.of();
 			}
-			targets = fromLeaf(level, origin, state, leafGroups, config);
+			targets = fromLeaf(level, origin, state, leafGroups, config, reach);
 		} else {
 			Set<Role> required = BlockWhitelist.cubeRolesFor(state);
 			if (required.isEmpty() || !overlaps(required, roles)) {
@@ -140,7 +152,7 @@ public final class BreakHandler {
 			}
 
 			targets = new ArrayList<>();
-			for (BlockPos candidate : CubeMiner.collect(origin, cubeSize)) {
+			for (BlockPos candidate : CubeMiner.collect(origin, reach.cubeSize(), reach.cubeBelow())) {
 				Set<Role> needed = BlockWhitelist.cubeRolesFor(level.getBlockState(candidate));
 				if (!needed.isEmpty() && overlaps(needed, roles)) {
 					targets.add(candidate);
@@ -177,47 +189,54 @@ public final class BreakHandler {
 		return kept;
 	}
 
-	/** The tree above the cut log, and its own canopy. */
+	/**
+	 * The tree above the cut log, and its own canopy. When the player takes
+	 * what is below as well, that is the whole tree, stump and roots included;
+	 * otherwise the roots stay, and clearing them is a swing at a root.
+	 */
 	private static List<BlockPos> fell(
 			final ServerLevel level, final BlockPos origin, final TreeGroup group,
-			final BulkMineConfig.Server config) {
+			final BulkMineConfig.Server config, final Reach reach) {
 		List<BlockPos> logs = TreeFeller.collectLogs(
-				level, origin, false, group, origin.getY(), config.maxLogs, config.treeRadius);
+				level, origin, false, group, reach.treeFloor(origin), config.maxLogs, config.treeRadius);
 
-		if (!config.breakLeaves) {
-			return logs;
-		}
-
-		// Seed the leaf search from the broken log too, otherwise felling a
-		// one-block trunk would leave its canopy floating.
-		List<BlockPos> leafSeeds = new ArrayList<>(logs);
-		leafSeeds.add(origin);
+		// Seed from the broken log too, otherwise felling a one-block trunk
+		// would leave its canopy floating, or its roots.
+		List<BlockPos> seeds = new ArrayList<>(logs);
+		seeds.add(origin);
 
 		List<BlockPos> targets = new ArrayList<>(logs);
-		targets.addAll(TreeFeller.collectLeaves(level, leafSeeds, grownLeafOf(List.of(group), config),
-				TreeFeller.NO_FLOOR, config.leafDistance, config.maxLeaves));
+		if (reach.treeBelow()) {
+			targets.addAll(TreeFeller.collectTreeRoots(
+					level, seeds, group, TreeFeller.NO_FLOOR, origin, config.treeRadius, config.maxRoots));
+		}
+		if (config.breakLeaves) {
+			targets.addAll(TreeFeller.collectLeaves(level, seeds, grownLeafOf(List.of(group), config),
+					TreeFeller.NO_FLOOR, config.leafDistance, config.maxLeaves));
+		}
 		return targets;
 	}
 
 	/**
 	 * Roots on their own, or -- when they lead to the tree's trunk within
-	 * reach -- the whole tree from the height of the hit root up, centred on
-	 * that trunk. Hitting the trunk leaves the roots; hitting a root takes
-	 * the tree with it. Which one happens is the player's choice of where to
-	 * swing.
+	 * reach -- the whole tree from the height of the hit root up (or all of
+	 * it, when the player takes what is below), centred on that trunk.
+	 * Unless the player takes what is below, hitting the trunk leaves the
+	 * roots and hitting a root takes the tree with it, so which one happens
+	 * is the player's choice of where to swing.
 	 */
 	private static List<BlockPos> fromRoot(
 			final ServerLevel level, final BlockPos origin, final TreeGroup group,
-			final Set<Role> roles, final BulkMineConfig.Server config) {
+			final Set<Role> roles, final BulkMineConfig.Server config, final Reach reach) {
+		int floor = reach.treeFloor(origin);
 		TreeFeller.RootSearch search = TreeFeller.searchRoots(
-				level, origin, group, config.rootRadius, config.maxRoots);
+				level, origin, group, floor, config.rootRadius, config.maxRoots);
 		// Felling takes logs, which needs the same axe role as cutting a log.
 		if (search.firstLog() == null || !roles.contains(Role.AXE)) {
 			return search.roots();
 		}
 
 		BlockPos trunk = search.firstLog();
-		int floor = origin.getY();
 		List<BlockPos> logs = TreeFeller.collectLogs(
 				level, trunk, true, group, floor, config.maxLogs, config.treeRadius);
 
@@ -235,18 +254,19 @@ public final class BreakHandler {
 	}
 
 	/**
-	 * Leaves joined to the hit one, at or above it. Starting from a placed
+	 * Leaves joined to the hit one, at or above it unless the player takes
+	 * what is below as well. Starting from a placed
 	 * leaf reaches grown ones too; starting from a grown one never reaches a
 	 * placed one, unless the distinction is switched off.
 	 */
 	private static List<BlockPos> fromLeaf(
 			final ServerLevel level, final BlockPos origin, final BlockState state,
-			final List<TreeGroup> groups, final BulkMineConfig.Server config) {
+			final List<TreeGroup> groups, final BulkMineConfig.Server config, final Reach reach) {
 		Predicate<BlockState> isLeaf = TreeFeller.isPlaced(state)
 				? candidate -> isLeafOf(groups, candidate)
 				: grownLeafOf(groups, config);
 		return TreeFeller.collectLeaves(
-				level, List.of(origin), isLeaf, origin.getY(), config.leafDistance, config.maxLeaves);
+				level, List.of(origin), isLeaf, reach.treeFloor(origin), config.leafDistance, config.maxLeaves);
 	}
 
 	/**

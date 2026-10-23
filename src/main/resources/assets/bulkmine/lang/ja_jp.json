@@ -14,6 +14,10 @@
 	"bulkmine.command.config.header": "あなたの設定:",
 	"bulkmine.command.config.server": "サーバー設定:",
 	"bulkmine.command.size.set": "立方サイズを %s に設定しました",
+	"bulkmine.command.cube_below.on": "立方範囲で、カーソルより下の層も掘ります",
+	"bulkmine.command.cube_below.off": "立方範囲で、カーソルより下の層は掘りません",
+	"bulkmine.command.tree_below.on": "伐採・葉・根で、叩いた位置より下も刈ります",
+	"bulkmine.command.tree_below.off": "伐採・葉・根で、叩いた位置より下は残します",
 
 	"bulkmine.command.tool.added": "%s を %s として登録しました",
 	"bulkmine.command.tool.removed": "%s を削除しました",

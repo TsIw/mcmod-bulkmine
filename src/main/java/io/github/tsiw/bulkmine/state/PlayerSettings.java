@@ -35,6 +35,27 @@ public final class PlayerSettings {
 			.buildAndRegister(BulkMine.id("cube_size"));
 
 	/**
+	 * Whether the cube takes the layers below the cursor too, and whether
+	 * felling and clearing go below the block that was hit. Off until the
+	 * player turns them on, with no server-side default to follow: a default
+	 * that could move would change someone's digging without their asking.
+	 *
+	 * <p>Not part of the state sent to the client, so the HUD and the network
+	 * protocol stay as they were and older clients keep working.
+	 */
+	private static final AttachmentType<Boolean> CUBE_BELOW = AttachmentRegistry.<Boolean>builder()
+			.persistent(Codec.BOOL)
+			.copyOnDeath()
+			.initializer(() -> Boolean.FALSE)
+			.buildAndRegister(BulkMine.id("cube_below"));
+
+	private static final AttachmentType<Boolean> TREE_BELOW = AttachmentRegistry.<Boolean>builder()
+			.persistent(Codec.BOOL)
+			.copyOnDeath()
+			.initializer(() -> Boolean.FALSE)
+			.buildAndRegister(BulkMine.id("tree_below"));
+
+	/**
 	 * Forces the attachment types above to exist.
 	 *
 	 * <p>They register from this class's static initialiser, which Java does
@@ -98,6 +119,22 @@ public final class PlayerSettings {
 	public static void setCubeSize(final ServerPlayer player, final int size) {
 		player.setAttached(CUBE_SIZE, size);
 		sync(player);
+	}
+
+	public static boolean cubeBelow(final ServerPlayer player) {
+		return player.getAttachedOrCreate(CUBE_BELOW);
+	}
+
+	public static void setCubeBelow(final ServerPlayer player, final boolean below) {
+		player.setAttached(CUBE_BELOW, below);
+	}
+
+	public static boolean treeBelow(final ServerPlayer player) {
+		return player.getAttachedOrCreate(TREE_BELOW);
+	}
+
+	public static void setTreeBelow(final ServerPlayer player, final boolean below) {
+		player.setAttached(TREE_BELOW, below);
 	}
 
 	/** Pushes the authoritative values to the client's HUD. */

@@ -88,7 +88,13 @@ public final class BulkMineCommand {
 				.executes(BulkMineCommand::showConfig)
 				.then(Commands.literal("size")
 						.then(Commands.argument("size", IntegerArgumentType.integer(1, 15))
-								.executes(BulkMineCommand::setSize))));
+								.executes(BulkMineCommand::setSize)))
+				.then(Commands.literal("cubeBelow")
+						.then(Commands.literal("on").executes(context -> setCubeBelow(context, true)))
+						.then(Commands.literal("off").executes(context -> setCubeBelow(context, false))))
+				.then(Commands.literal("treeBelow")
+						.then(Commands.literal("on").executes(context -> setTreeBelow(context, true)))
+						.then(Commands.literal("off").executes(context -> setTreeBelow(context, false)))));
 
 		root.then(Commands.literal("tool")
 				.requires(BulkMineCommand::canManage)
@@ -173,6 +179,22 @@ public final class BulkMineCommand {
 		return size;
 	}
 
+	private static int setCubeBelow(final CommandContext<CommandSourceStack> context, final boolean below)
+			throws CommandSyntaxException {
+		PlayerSettings.setCubeBelow(context.getSource().getPlayerOrException(), below);
+		context.getSource().sendSuccess(() -> Component.translatable(
+				below ? "bulkmine.command.cube_below.on" : "bulkmine.command.cube_below.off"), false);
+		return 1;
+	}
+
+	private static int setTreeBelow(final CommandContext<CommandSourceStack> context, final boolean below)
+			throws CommandSyntaxException {
+		PlayerSettings.setTreeBelow(context.getSource().getPlayerOrException(), below);
+		context.getSource().sendSuccess(() -> Component.translatable(
+				below ? "bulkmine.command.tree_below.on" : "bulkmine.command.tree_below.off"), false);
+		return 1;
+	}
+
 	/** Your own settings first, then the server values that constrain them. */
 	private static int showConfig(final CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
 		ServerPlayer player = context.getSource().getPlayerOrException();
@@ -182,6 +204,8 @@ public final class BulkMineCommand {
 		source.sendSuccess(() -> Component.translatable("bulkmine.command.config.header"), false);
 		line(source, "bulk mining", PlayerSettings.isEnabled(player) ? "on" : "off");
 		line(source, "cube size", String.valueOf(PlayerSettings.cubeSize(player)));
+		line(source, "cubeBelow", PlayerSettings.cubeBelow(player) ? "on" : "off");
+		line(source, "treeBelow", PlayerSettings.treeBelow(player) ? "on" : "off");
 
 		source.sendSuccess(() -> Component.translatable("bulkmine.command.config.server"), false);
 		line(source, "enabled", String.valueOf(server.enabled));
